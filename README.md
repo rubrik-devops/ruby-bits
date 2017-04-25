@@ -27,6 +27,22 @@ Common options:
     -h, --help                       Show this message
 ```
 
+# Examples:
+## Check the SLA Domain of a Virtual Machine
+```
+Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --get --sla
+Returns - Silver
+```
+## Set the SLA of a Virtual Machine
+```
+Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --assure Bronze --sla
+Returns - Nothing on success, Output on Error
+```
+## Check the SLA Domain of a Virtual Machine after setting
+```
+Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --get --sla
+Returns - Bronze
+```
 # Use Cases:
 * Rubrik SLA Policies by Role
 * Submit new use cases please

@@ -52,7 +52,7 @@ if @options.sla then
   require 'getFromApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
-  if @options.get && effectiveSla then
+  if @options.get then
     effectiveSla = sla_hash[findVmItem(@options.vm, 'effectiveSlaDomainId')]
     # Get the SLA Domain for node
     puts "#{effectiveSla}"
