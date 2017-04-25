@@ -62,15 +62,15 @@ if @options.sla then
     listData['data'].each do |s|
       lookupSla = s['effectiveSlaDomainId']
       if lookupSla == 'UNPROTECTED' then 
-        #puts s['name'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] 
+        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] 
       else
         slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
         if s['primaryClusterId'] == slData['primaryClusterId'] then
-          result = "Good"
+          result = "Proper SLA Assignment"
         else
-          result = "BAD"
+          result = "Check SLA Assignemnt!"
         end
-        puts s['name'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] + ", " + slData['primaryClusterId'] + ", " + result
+        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] + ", " + slData['primaryClusterId'] + ", " + result
       end
     end
     exit

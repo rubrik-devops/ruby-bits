@@ -43,6 +43,22 @@ Returns - Nothing on success, Output on Error
 Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --get --sla
 Returns - Bronze
 ```
+## Instant Recovery of a Virtual Machine - THIS WILL DEPRECATE THE PRODUCTION VM!!!
+```
+Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --dr
+Returns - Nothing on success, Output on Error
+```
+## List SLA Domains, and cross check primary cluster
+```
+Command -  ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --sla --list
+Returns - CSV (name, SLA Name, SLA ID, Primary Cluster of VM, Primary Cluster of SLA, Suggestion)
+
+VUM1, Unprotected, UNPROTECTED, 5fca952e-d332-4419-bb96-8339d9beb3ac
+SE-JRIJNBEE-LINUX, Unprotected, UNPROTECTED, 5fca952e-d332-4419-bb96-8339d9beb3ac
+cloudian-node-3, Unprotected, UNPROTECTED, 5fca952e-d332-4419-bb96-8339d9beb3ac
+DEMO-SQL12-WFC2, Unprotected, UNPROTECTED, 5fca952e-d332-4419-bb96-8339d9beb3ac
+SE-RMILLER-LINUX, Gold, d8a8430c-40de-4cb7-b834-bd0e7de40ed1, 5fca952e-d332-4419-bb96-8339d9beb3ac, 5fca952e-d332-4419-bb96-8339d9beb3ac, Proper SLA Assignment
+```
 # Use Cases:
 * Rubrik SLA Policies by Role
 * Submit new use cases please
