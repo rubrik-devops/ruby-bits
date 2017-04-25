@@ -3,39 +3,27 @@ ruby-bits
 
 Generic ruby bits to be organized and used in chef/puppet environments
 
-#Overview:
+# Overview:
 * Rubrik Framework for issuing commands in Ruby 
 
-#How to use:
-* ~/.rubrik/creds.json must be in place in order to use any of the underlying code
-```json
-{
-    "server": "[FQDN/IP of appliance]",
-    "username": "[username]",
-    "password": "[password]"
-}
-```
-* rubrikSetSla.rb 
-**Usage : rubrikFileSearch.rb [vm_name] [sla_name]**
-```
-  Use this in order to confirm/change Rubrik SLA Domain for a vm_name.
+# How to use:
+```Usage: rubrik.rb [options]
 
-  The script will confirm current subscription, if it exists, and act accordingly
-  		 If SLA Domain is already set to desired name:
-  			 * Rubrik SLA Domain already set properly
-  		 If SLA Domain does not exist:
-  			 * Rubrik SLA Domain not set properly
-  			 * Rubrik SLA Domain does NOT exist, cannot comply
-  		 If SLA Domain exists and is VM is reassigned
-  			 * Rubrik SLA Domain not set properly
-  			 * Rubrik SLA Domain Exists, setting vm_name to use it
-  			 * Rubrik SLA Domain Set to sla_name
-```
-* rubrikFileSearch.rb
-**Usage : rubrikFileSearch.rb [vm_name] [file_name]**
-``` 
-   Use this to perform adhoc file searches on a vm. 
-```
+Specific options:
+    -l, --login                      Perform no operations but return authentication token
+    -c, --client [name]              Name of Virtual Machine to perform operation for
+    -g, --get                        Perform GET operation
+    -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
+        --dr                         Instant Recovery of --client
+        --sla                        Perform and SLA Operation (used with --get or --assure
+        --list                       Audit SLA configuration (used with --sla)
+        --file                       Experimental - file search and recovery
+
+Common options:
+    -n, --node [Address]             Rubrik Cluster Address/FQDN
+    -u, --username [username]        Rubrik Cluster Username
+    -p, --password [password]        Rubrik Cluster Password
+    -h, --help                       Show this message```
 
 #Use Cases:
 * Rubrik SLA Policies by Role
