@@ -45,6 +45,9 @@ class ParseOptions
       opts.on('--sla') do |g|
       options[:sla] = g;
       end
+      opts.on('--list') do |g|
+      options[:list] = g;
+      end
       opts.on('--file') do |g|
       options[:file] = g;
       end

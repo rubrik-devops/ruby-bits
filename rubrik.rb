@@ -49,13 +49,33 @@ end
 
 if @options.sla then
   require 'getSlaHash.rb'
+  require 'getFromApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
-  effectiveSla = sla_hash[findVmItem(@options.vm, 'effectiveSlaDomainId')]
   if @options.get && effectiveSla then
+    effectiveSla = sla_hash[findVmItem(@options.vm, 'effectiveSlaDomainId')]
     # Get the SLA Domain for node
     puts "#{effectiveSla}"
   end
+  if @options.list then
+    listData = getFromApi("/api/v1/vmware/vm?limit=9999")
+    listData['data'].each do |s|
+      lookupSla = s['effectiveSlaDomainId']
+      if lookupSla == 'UNPROTECTED' then 
+        #puts s['name'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] 
+      else
+        slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
+        if s['primaryClusterId'] == slData['primaryClusterId'] then
+          result = "Good"
+        else
+          result = "BAD"
+        end
+        puts s['name'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] + ", " + slData['primaryClusterId'] + ", " + result
+      end
+    end
+    exit
+  end
+  effectiveSla = sla_hash[findVmItem(@options.vm, 'effectiveSlaDomainId')]
   if @options.assure && (effectiveSla != @options.assure) then
     require 'setSla.rb'
     if @options.assure == effectiveSla 
