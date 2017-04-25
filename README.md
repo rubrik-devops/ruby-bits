@@ -7,7 +7,8 @@ Generic ruby bits to be organized and used in chef/puppet environments
 * Rubrik Framework for issuing commands in Ruby 
 
 # How to use:
-```Usage: rubrik.rb [options]
+```
+Usage: rubrik.rb [options]
 
 Specific options:
     -l, --login                      Perform no operations but return authentication token
@@ -23,9 +24,10 @@ Common options:
     -n, --node [Address]             Rubrik Cluster Address/FQDN
     -u, --username [username]        Rubrik Cluster Username
     -p, --password [password]        Rubrik Cluster Password
-    -h, --help                       Show this message```
+    -h, --help                       Show this message
+```
 
-#Use Cases:
+# Use Cases:
 * Rubrik SLA Policies by Role
 * Submit new use cases please
 
