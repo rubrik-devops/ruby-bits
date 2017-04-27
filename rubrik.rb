@@ -24,7 +24,7 @@ if @options.metric then
   require 'getFromApi.rb'
   if @options.iostat then
     require 'uri'
-    h=getFromApi("/api/internal/cluster/me/io_stats?range=-1min")
+    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{@options.iostat}")
     puts h
   end
 end
