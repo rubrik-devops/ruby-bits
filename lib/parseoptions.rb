@@ -40,7 +40,7 @@ class ParseOptions
     opts.on('--metric', "Return Requested Metric") do |g|
       options[:metric] = g;
     end
-    opts.on('--iostat', "Return iostat information") do |g|
+    opts.on('-i', '--iostat [range]', "Return iostat information for range (30sec, 60min, etc)") do |g|
       options[:iostat] = g;
     end
     opts.on('--file', "Experimental - file search and recovery") do |g|
