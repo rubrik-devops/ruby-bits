@@ -22,10 +22,15 @@ end
 
 if @options.metric then
   require 'getFromApi.rb'
+  require 'json'
   if @options.iostat then
     require 'uri'
     h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{@options.iostat}")
-    puts h
+    if @options.json then
+      puts h.to_json
+    else 
+      puts h
+    end
   end
 end
 
