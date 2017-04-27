@@ -37,8 +37,13 @@ class ParseOptions
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;
     end
+    opts.separator ""
+    opts.separator "Metric options:"
     opts.on('--metric', "Return Requested Metric") do |g|
       options[:metric] = g;
+    end
+    opts.on('-s', '--storage', "Return storage capacity information") do |g|
+      options[:storage] = g;
     end
     opts.on('-i', '--iostat [range]', "Return iostat information for range (30sec, 60min, etc)") do |g|
       options[:iostat] = g;
