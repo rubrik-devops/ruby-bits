@@ -52,7 +52,12 @@ if @options.dr then
     vmwareHosts["data"].each do |vmwareHosts|
 	hostList.push(vmwareHosts["id"]) if vmwareHosts["primaryClusterId"] === clusterInfo["id"]
     end
+<<<<<<< Updated upstream
     o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{@options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+=======
+    puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
+    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "snapshotId" => "#{latestSnapshot}","vmName" => "#{@options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => false})
+>>>>>>> Stashed changes
 end
 
 
