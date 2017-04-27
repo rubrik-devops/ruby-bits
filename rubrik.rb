@@ -20,6 +20,15 @@ if @options.file then
   end
 end
 
+if @options.metric then
+  require 'getFromApi.rb'
+  if @options.iostat then
+    require 'uri'
+    h=getFromApi("/api/internal/cluster/me/io_stats?range=-1min")
+    puts h
+  end
+end
+
 if @options.login then
    require 'getToken.rb'
    token=get_token()

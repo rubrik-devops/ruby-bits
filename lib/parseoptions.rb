@@ -37,6 +37,12 @@ class ParseOptions
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;
     end
+    opts.on('--metric', "Return Requested Metric") do |g|
+      options[:metric] = g;
+    end
+    opts.on('--iostat', "Return iostat information") do |g|
+      options[:iostat] = g;
+    end
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
