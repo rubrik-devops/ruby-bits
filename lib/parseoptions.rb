@@ -51,6 +51,8 @@ class ParseOptions
     opts.on('-j', '--json', "Output in JSON if possible") do |g|
       options[:json] = g;
     end
+    opts.separator ""
+    opts.separator "Experimental options:"
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
