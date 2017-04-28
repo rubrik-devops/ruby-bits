@@ -29,6 +29,15 @@ if @options.metric then
   if @options.iostat then
     h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{@options.iostat}")
   end
+  if @options.archivebw then
+    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{@options.archivebw}")
+  end
+  if @options.runway then
+    h=getFromApi("/api/internal/stats/runway_remaining")
+  end
+  if @options.incomingsnaps then
+    h=getFromApi("/api/internal/stats/streams/count")
+  end
   if @options.json then
     puts h.to_json
   else 

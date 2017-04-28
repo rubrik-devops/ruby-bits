@@ -42,11 +42,20 @@ class ParseOptions
     opts.on('--metric', "Return Requested Metric") do |g|
       options[:metric] = g;
     end
-    opts.on('-s', '--storage', "Return storage capacity information") do |g|
+    opts.on('--storage', "Return storage capacity information") do |g|
       options[:storage] = g;
     end
-    opts.on('-i', '--iostat [range]', "Return iostat information for range (30sec, 60min, etc)") do |g|
+    opts.on('--incoming', "Return the number of currently incoming snapshots") do |g|
+      options[:incomingsnaps] = g;
+    end
+    opts.on('--runway', "Return the available runway in days") do |g|
+      options[:runway] = g;
+    end
+    opts.on('--iostat [range]', "Return iostat information for range (30sec, 60min, etc)") do |g|
       options[:iostat] = g;
+    end
+    opts.on('--archivebw [range]', "Return archive bandwidth nformation for range (30sec, 60min, etc)") do |g|
+      options[:archivebw] = g;
     end
     opts.on('-j', '--json', "Output in JSON if possible") do |g|
       options[:json] = g;
