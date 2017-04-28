@@ -18,6 +18,14 @@ Specific options:
         --dr                         Instant Recovery of --client
         --sla                        Perform and SLA Operation (used with --get or --assure
         --list                       Audit SLA configuration (used with --sla)
+
+Metric options:
+        --metric                     Return Requested Metric
+    -s, --storage                    Return storage capacity information
+    -i, --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+    -j, --json                       Output in JSON if possible
+
+Experimental options:
         --file                       Experimental - file search and recovery
 
 Common options:
@@ -28,6 +36,11 @@ Common options:
 ```
 
 # Examples:
+## Get Disk Capacity Metrics from the Rubrik Cluster
+```
+Command - ruby rubrik.rb -n my.rubrik.cluster -u admin -p password --metric --storage --json
+Returns - {"total":59577558938215,"used":9201035200028,"available":50376523738187,"lastUpdateTime":"2017-04-28T12:00:47Z"}
+```
 ## Check the SLA Domain of a Virtual Machine
 ```
 Command - ruby rubrik.rb --node my.rubrik.cluster --username admin --password password --client my-vm-name --get --sla
