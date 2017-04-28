@@ -21,8 +21,11 @@ Specific options:
 
 Metric options:
         --metric                     Return Requested Metric
-    -s, --storage                    Return storage capacity information
-    -i, --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+        --storage                    Return storage capacity information
+        --incoming                   Return the number of currently incoming snapshots
+        --runway                     Return the available runway in days
+        --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+        --archivebw [range]          Return archive bandwidth nformation for range (30sec, 60min, etc)
     -j, --json                       Output in JSON if possible
 
 Experimental options:
