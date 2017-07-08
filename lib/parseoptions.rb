@@ -54,8 +54,17 @@ class ParseOptions
     opts.on('--iostat [range]', "Return iostat information for range (30sec, 60min, etc)") do |g|
       options[:iostat] = g;
     end
-    opts.on('--archivebw [range]', "Return archive bandwidth nformation for range (30sec, 60min, etc)") do |g|
+    opts.on('--archivebw [range]', "Return archive bandwidth information for range (30sec, 60min, etc)") do |g|
       options[:archivebw] = g;
+    end
+    opts.on('--physicalingest [range]', "Return physical ingest bandwidth information for range (30sec, 60min, etc)") do |g|
+      options[:physicalingest] = g;
+    end
+    opts.on('--localingest [range]', "Return local ingest bandwidth information for range (30sec, 60min, etc)") do |g|
+      options[:localingest] = g;
+    end
+    opts.on('--snapshotingest [range]', "Return snapshot ingest bandwidth information for range (30sec, 60min, etc)") do |g|
+      options[:snapshotingest] = g;
     end
     opts.on('-j', '--json', "Output in JSON if possible") do |g|
       options[:json] = g;
@@ -83,5 +92,5 @@ class ParseOptions
   end
   opt_parser.parse!(args)
    options
-  end  
-end  
+  end
+end

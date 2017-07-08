@@ -32,6 +32,15 @@ if @options.metric then
   if @options.archivebw then
     h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{@options.archivebw}")
   end
+  if @options.snapshotingest then
+    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{@options.snapshotingest}")
+  end
+  if @options.localingest then
+    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{@options.localingest}")
+  end
+  if @options.physicalingest then
+    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{@options.physicalingest}")
+  end
   if @options.runway then
     h=getFromApi("/api/internal/stats/runway_remaining")
   end
