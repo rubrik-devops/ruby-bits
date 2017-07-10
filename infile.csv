@@ -1,0 +1,2 @@
+"fromVCenter","fromDatacenter","VMName","toVCenter","toDatacenter","toCluster","toDatastore","toPortGroup"
+"devops-vcsa.rangers.lab","Santa Clara","devops-gpfs02","devops-vcsa.rangers.lab","Santa Clara","devops-lab","teg_devops_ds01","DR_172.21.12.0"

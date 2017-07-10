@@ -49,7 +49,7 @@ if @options.metric then
   end
   if @options.json then
     puts h.to_json
-  else 
+  else
     puts h
   end
 end
@@ -79,9 +79,40 @@ if @options.dr then
     end
     o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{@options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
-    #o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "snapshotId" => "#{latestSnapshot}","vmName" => "#{@options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => false})
 end
 
+if @options.drcsv then
+    require 'CSV'
+    require 'pp'
+    require 'getVm.rb'
+    require 'uri'
+    require 'json'
+    require 'setToApi.rb'
+    require 'vmOperations.rb'
+    # lets grab the csv into memory
+    vmlist = CSV.read(@options.infile, {:headers => true})
+    # and itterate them
+    vmlist.each do |vmobj|
+      puts "Shutting down " + vmobj['VMName']
+      shutdownVm(vmobj['fromVCenter'],@options.vcenteruser,@options.vcenterpw,vmobj['fromDatacenter'],vmobj['VMName'])
+      sleep(20)
+      startVm(vmobj['toVCenter'],@options.vcenteruser,@options.vcenterpw,vmobj['toDatacenter'],vmobj['VMName'])
+    end
+    #Get Cluster ID
+    #clusterInfo=getFromApi("/api/v1/cluster/me")
+    #id=findVmItem(@options.vm,'id')
+    #Get Latest Snapshot
+    #h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
+    #latestSnapshot =  h['data'][0]['id']
+    #Get vmWare Hosts for the Cluster
+    #vmwareHosts=getFromApi("/api/v1/vmware/host")
+    #hostList = Array.new
+    #vmwareHosts["data"].each do |vmwareHosts|
+    #    hostList.push(vmwareHosts["id"]) if vmwareHosts["primaryClusterId"] === clusterInfo["id"]
+    #end
+    #o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{@options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+    #puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
+end
 
 if @options.sla then
   require 'getSlaHash.rb'
@@ -97,8 +128,8 @@ if @options.sla then
     listData = getFromApi("/api/v1/vmware/vm?limit=9999")
     listData['data'].each do |s|
       lookupSla = s['effectiveSlaDomainId']
-      if lookupSla == 'UNPROTECTED' then 
-        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] 
+      if lookupSla == 'UNPROTECTED' then
+        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
       else
         slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
         if s['primaryClusterId'] == slData['primaryClusterId'] then
@@ -114,14 +145,14 @@ if @options.sla then
   effectiveSla = sla_hash[findVmItem(@options.vm, 'effectiveSlaDomainId')]
   if @options.assure && (effectiveSla != @options.assure) then
     require 'setSla.rb'
-    if @options.assure == effectiveSla 
+    if @options.assure == effectiveSla
       puts "Looks like its set"
     else
       if sla_hash.invert[@options.assure]
         res = setSla(findVmItem(@options.vm, 'id'), sla_hash.invert[@options.assure])
         if !res.nil?
 	  res = JSON.parse(res)
-         # if res["effectiveSlaDomain"]["name"] == @options.assure 
+         # if res["effectiveSlaDomain"]["name"] == @options.assure
          #   puts "#{@options.assure}"
          # end
         else

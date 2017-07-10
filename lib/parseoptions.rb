@@ -31,6 +31,18 @@ class ParseOptions
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
+    opts.on('--drcsv', "Instant Recovery of a csv of clients") do |g|
+      options[:drcsv] = g;
+    end
+    opts.on('--vcenteruser [string]', "VCenter username") do |g|
+      options[:vcenteruser] = g;
+    end
+    opts.on('--vcenterpw [string]', "VCenter password") do |g|
+      options[:vcenterpw] = g;
+    end
+    opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
+      options[:infile] = g;
+    end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
       options[:sla] = g;
     end
