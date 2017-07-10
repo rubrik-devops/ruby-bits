@@ -1,12 +1,11 @@
 require 'rbvmomi'
 def shutdownVm(vcenter,vcenteruser,vcenterpw,datacenter,vmname)
-  puts "Begin Shutdown"
   begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter}", user: "#{vcenteruser}", password: "#{vcenterpw}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(datacenter) || fail('datacenter not found')
     vm = dc.find_vm(vmname) || fail("VM not found #{vmname}")
     if vm.runtime.powerState == "poweredOff"
-      puts "Machine is already Off"
+      logme("#{vm.name}","Check Power State",vm.runtime.powerState)
       return
     end
     vm.ShutdownGuest
@@ -14,20 +13,17 @@ def shutdownVm(vcenter,vcenteruser,vcenterpw,datacenter,vmname)
     puts "Error: #{vm.name} - #{e}"
   end
   while vm.runtime.powerState == "poweredOn"
-    puts "Checking state " + vm.runtime.powerState
     sleep 5
   end
-  puts "Checking state " + vm.runtime.powerState
-  puts "End Shutdown"
+  logme("#{vm.name}","Check Power State ", vm.runtime.powerState)
 end
 def startVm(vcenter,vcenteruser,vcenterpw,datacenter,vmname)
-  puts "Begin Startup"
   begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter}", user: "#{vcenteruser}", password: "#{vcenterpw}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(datacenter) || fail('datacenter not found')
     vm = dc.find_vm(vmname) || fail("VM not found #{vmname}")
     if vm.runtime.powerState == "poweredOn"
-      puts "Machine is already On"
+      logme("#{vm.name}","Check Power State", vm.runtime.powerState)
       return
     end
     vm.PowerOnVM_Task
@@ -35,9 +31,7 @@ def startVm(vcenter,vcenteruser,vcenterpw,datacenter,vmname)
     puts "Error: #{e}"
   end
   while vm.runtime.powerState == "poweredOff"
-    puts "Checking state " + vm.runtime.powerState
     sleep 5
   end
-  puts "Checking state " + vm.runtime.powerState
-  puts "End Startup"
+  logme("#{vm.name}","Checking Power State ", vm.runtime.powerState)
 end
