@@ -1,0 +1,17 @@
+{
+	"rubrik": {
+        	"server": "FQDN",
+        	"username": "",
+        	"password": ""
+	},
+         "toVCenter": {
+		"server": "FQDN",
+		"username": "",
+		"password": ""
+	},
+        "fromVCenter": {
+		"server": "FQDN",
+		"username": "",
+		"password": ""
+	}
+}

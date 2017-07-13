@@ -1,8 +1,6 @@
 require 'optparse'
 require 'optparse/time'
 require 'ostruct'
-require 'pp'
-
 class ParseOptions
 
   CODES = %w[iso-2022-jp shift_jis euc-jp utf8 binary]
@@ -34,14 +32,11 @@ class ParseOptions
     opts.on('--drcsv', "Instant Recovery of a csv of clients") do |g|
       options[:drcsv] = g;
     end
-    opts.on('--vcenteruser [string]', "VCenter username") do |g|
-      options[:vcenteruser] = g;
-    end
-    opts.on('--vcenterpw [string]', "VCenter password") do |g|
-      options[:vcenterpw] = g;
-    end
     opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
       options[:infile] = g;
+    end
+    opts.on('-t', '--threads [string]', "Number of simultaneous migrations") do |t|
+      options[:threads] = t;
     end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
       options[:sla] = g;

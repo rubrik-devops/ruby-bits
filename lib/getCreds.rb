@@ -8,5 +8,9 @@
 # Most routines will accept login info as arguments (arg1 arg2 node username password)
 
 def getCreds
-	return JSON.parse(File.read(ENV['HOME']+'/.rubrik/creds.json'))
+	begin
+		return JSON.parse(File.read('.creds'))
+	rescue StandardError=>e
+		return e
+	end
 end
