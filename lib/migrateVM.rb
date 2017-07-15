@@ -60,6 +60,7 @@ class MigrateVM
       logme("#{vmobj['VMName']}","Ping",snapshot_status)
     end
 
+
 # Retrieve the latest snaphot it Instant Recover
     h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
     latestSnapshot =  h['data'][0]['id']
@@ -70,7 +71,11 @@ class MigrateVM
     VmwareHosts["data"].each do |vh|
       vcid = vh['computeClusterId'].scan(/^.*\:+(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})-.*$/)
       if VmwareVCenters[vcid] == vmobj['toVCenter']
-        hl.push(vh["id"])
+        vhid = vh['id'].scan(/^.*\:+\w{8}-\w{4}-\w{4}-\w{4}-\w{12}-(host-.*)$/)
+        mm = checkMaintenanceMode(Creds["toVCenter"],vhid,vmobj)
+        if  mm == 'false'
+          hl.push(vh["id"])
+        end
       end
     end
     myh=hl.sample(1)[0]
@@ -127,7 +132,24 @@ class MigrateVM
       last_remove_status = remove_status
       logme("#{vmobj['VMName']}","Ping",remove_status)
     end
+
+# Refresh the vcenter
+    refresh_vcenter = JSON.parse(setToApi('/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
+    refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+    last_refresh_status = refresh_status
+    while refresh_status != "SUCCEEDED"
+      refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+      if refresh_status != last_refresh_status
+        logme("#{vmobj['VMName']}","Updating VCenter Data",refresh_status.capitalize)
+        sleep 10
+      end
+      last_refresh_status = refresh_status
+      logme("#{vmobj['VMName']}","Ping",refresh_status)
+    end
+
+# Reset the SLA Domain on the Recovered VM
     logme("#{vmobj['VMName']}","Reset SLA Domain",effectiveSla)
+    id=findVmItem(vmobj['VMName'],'id')
     setSla(id,effectiveSla)
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}")
   end

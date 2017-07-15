@@ -121,6 +121,56 @@ def changePortGroup(vcenter,vmobj)
   end
 end
 
+# Need to check runtime.inMaintenanceMode
+def checkMaintenanceMode(vcenter,host,vmobj)
+#  begin
+    vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
+    dc = vim.serviceInstance.find_datacenter(vmobj['toDatacenter']) || fail('datacenter not found')
+    h = findhost(dc.hostFolder,host[0])
+    if h.to_s != "0"
+      return h.runtime.inMaintenanceMode.to_s
+    end
+#  rescue StandardError=>e
+#    puts host
+  #  logme("#{vm.name}","Checking host maintenance mode", "#{e}")
+#  end
+end
+
+def findhost(folder,name)
+  name = name[0]
+  children = folder.children.find_all
+  children.each do |child|
+    if child.class == RbVmomi::VIM::HostSystem
+      if (child.itself.to_s.include?name)
+        found = child
+      else
+        next
+      end
+    elsif child.class == RbVmomi::VIM::ClusterComputeResource
+      child.host.each do |x|
+        if (x.itself.to_s[name])
+          found = x
+        else
+          next
+        end
+      end
+    elsif child.class == RbVmomi::VIM::ComputeResource
+      if (child.itself.to_s[name])
+        found = x
+      else
+        next
+      end
+    elsif child.class == RbVmomi::VIM::HostFolder
+      found = findhost(child,name)
+    end
+    if found.class == RbVmomi::VIM::HostSystem
+      return found
+    else
+      return 0
+    end
+  end
+end
+
 def findvm(folder,name)
   children = folder.children.find_all
   children.each do |child|
