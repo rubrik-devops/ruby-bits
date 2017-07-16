@@ -111,26 +111,24 @@ class MigrateVM
 
 # Remove Instant Recover from Rubrik
     recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
-    mount = nil
     recovery_result.each do |r|
       if r['rel'] == "result"
         mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/)
+        logme("#{vmobj['VMName']}","Remove Live Mount","#{mount}")
+        remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount}?force=true",'',"delete"))['id']
+        logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
+        remove_status = ''
+        last_remove_status = ''
+        while remove_status != "SUCCEEDED"
+          remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
+          if remove_status != last_remove_status
+            logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
+            sleep 10
+          end
+          last_remove_status = remove_status
+          logme("#{vmobj['VMName']}","Ping",remove_status)
+        end
       end
-    end
-    puts mount.to_s
-    logme("#{vmobj['VMName']}","Remove Live Mount","#{mount.to_s}")
-    remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount.to_s}?force=true",'',"delete"))['id']
-    logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
-    remove_status = ''
-    last_remove_status = ''
-    while remove_status != "SUCCEEDED"
-      remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
-      if remove_status != last_remove_status
-        logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
-        sleep 10
-      end
-      last_remove_status = remove_status
-      logme("#{vmobj['VMName']}","Ping",remove_status)
     end
 
 # Refresh the vcenter
