@@ -123,17 +123,16 @@ end
 
 # Need to check runtime.inMaintenanceMode
 def checkMaintenanceMode(vcenter,host,vmobj)
-#  begin
+  begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['toDatacenter']) || fail('datacenter not found')
     h = findhost(dc.hostFolder,host[0])
     if h.to_s != "0"
       return h.runtime.inMaintenanceMode.to_s
     end
-#  rescue StandardError=>e
-#    puts host
-  #  logme("#{vm.name}","Checking host maintenance mode", "#{e}")
-#  end
+  rescue StandardError=>e
+    logme("#{vm.name}","Checking host maintenance mode", "#{e}")
+  end
 end
 
 def findhost(folder,name)

@@ -111,15 +111,15 @@ class MigrateVM
 
 # Remove Instant Recover from Rubrik
     recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
+    mount = nil
     recovery_result.each do |r|
       if r['rel'] == "result"
-        pp r['href']
-        mount_id = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})$/)
+        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/)
       end
     end
-    puts mount_id
-    logme("#{vmobj['VMName']}","Remove Live Mount",mount_id)
-    remove_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/mount/' + mount_id + "?force=true",'',"delete"))['id']
+    puts mount.to_s
+    logme("#{vmobj['VMName']}","Remove Live Mount","#{mount.to_s}")
+    remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount.to_s}?force=true",'',"delete"))['id']
     logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
     remove_status = ''
     last_remove_status = ''
