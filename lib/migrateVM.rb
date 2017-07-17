@@ -112,23 +112,30 @@ class MigrateVM
 # Remove Instant Recover from Rubrik
     recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
     recovery_result.each do |r|
+      mount = nil
       if r['rel'] == "result"
-        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/)
-        logme("#{vmobj['VMName']}","Remove Live Mount","#{mount}")
-        remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount}?force=true",'',"delete"))['id']
-        logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
-        remove_status = ''
-        last_remove_status = ''
-        while remove_status != "SUCCEEDED"
-          remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
-          if remove_status != last_remove_status
-            logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
-            sleep 10
-          end
-          last_remove_status = remove_status
-          logme("#{vmobj['VMName']}","Ping",remove_status)
-        end
+        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/).flatten
+        pp mount
+        puts mount
       end
+      begin
+        logme("#{vmobj['VMName']}","Remove Live Mount","Started")
+        setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
+      rescue StandardError=>e
+        puts e
+      end
+      #remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
+    #  logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
+    #  remove_status = ''
+    #  last_remove_status = ''
+    #  while remove_status != "SUCCEEDED"
+    #    remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
+    #      logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
+    #      sleep 10
+    #    end
+    #    last_remove_status = remove_status
+    #    logme("#{vmobj['VMName']}","Ping",remove_status)
+    #  end
     end
 
 # Refresh the vcenter
