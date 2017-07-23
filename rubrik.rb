@@ -1,21 +1,31 @@
 $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
-require 'parseoptions.rb'
+require 'parseOptions.rb'
 require 'pp'
+require 'getCreds.rb'
+require 'getFromApi.rb'
+require 'json'
 
+class Hash
+   def Hash.nest
+     Hash.new{|h,k| h[k]=Hash.new(&h.default_proc) }
+   end
+end
+  Creds = getCreds();
+  Begintime=Time.now.to_i
 # Global options
 Options = ParseOptions.parse(ARGV)
 def logme(machine,topic,detail)
   time=Time.now
+  timepx=time.to_i
   return if topic == "Ping"
-  File.open('out.log', 'a') { |f| f.write("#{time} : " + machine + " : " + topic + " : " + detail + "\n") }
-  puts("#{time} : " + machine + " : " + topic + " : " + detail)
+  File.open(Begintime.to_s + ".txt", 'a') { |f| f.write("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail + "\n") }
+  puts("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail)
 end
 # Grab the SLAHash to make pretty names
 if Options.file then
   if Options.assure then
     require 'getVm.rb'
     require 'uri'
-    # do some file workflow
     ss = URI.encode(Options.assure.to_s)
     managedId=findVmItem(Options.vm,'managedId')
     h=getFromApi("/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
@@ -26,25 +36,24 @@ if Options.file then
 end
 
 if Options.metric then
-  require 'getFromApi.rb'
-  require 'json'
+
   if Options.storage then
     h=getFromApi("/api/internal/stats/system_storage")
   end
   if Options.iostat then
-    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{options.iostat}")
+    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{Options.iostat}")
   end
   if Options.archivebw then
-    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{options.archivebw}")
+    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}")
   end
   if Options.snapshotingest then
-    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{options.snapshotingest}")
+    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}")
   end
   if Options.localingest then
-    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{options.localingest}")
+    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}")
   end
   if Options.physicalingest then
-    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{options.physicalingest}")
+    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}")
   end
   if Options.runway then
     h=getFromApi("/api/internal/stats/runway_remaining")
@@ -52,8 +61,12 @@ if Options.metric then
   if Options.incomingsnaps then
     h=getFromApi("/api/internal/stats/streams/count")
   end
-  if Options.json then
-    puts h.to_json
+  if Options.blah then
+    puts JSON.pretty_generate(h)
+  elsif Options.csv then
+    json = JSON.parse(h.to_json)
+    puts json.first.collect {|k,v| k}.join(',')
+    puts json.collect {|node| "#{node.collect{|k,v| v}.join(',')}\n"}.join
   else
     puts h
   end
@@ -78,7 +91,7 @@ if Options.dr then
     latestSnapshot =  h['data'][0]['id']
     #Get vmWare Hosts for the Cluster
     hostList = Array.new
-    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
@@ -92,23 +105,54 @@ if Options.drcsv then
     require 'setToApi.rb'
     require 'vmOperations.rb'
     require 'migrateVM.rb'
-    require 'getCreds.rb'
-    Creds = getCreds();
-    vcenters=getFromApi("/api/v1/vmware/vcenter")
+    logme("BEGIN","BEGIN",Begintime.to_s)
+    logme("Core","Assembling Base Hashes","Started")
+    logme("Core","Assembling Base Hashes","Credentials")
+
+    (@token,@rubrikhost) = get_token()
+    vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
+    logme("Core","Assembling Base Hashes","Infrastsucture")
     VmwareVCenters = {}
-    vcenters["data"].each do |vcenter|
-      VmwareVCenters[vcenter['id'].scan(/^.*\:+(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/)] = vcenter['name']
+    vcenters.each do |vcenter|
+      VmwareVCenters[vcenter['id']] = vcenter['hostname']
     end
-    VmwareHosts=getFromApi("/api/v1/vmware/host")
+    vdatacenters=getFromApi("/api/internal/vmware/data_center")['data']
+    VmwareDatacenters = {}
+    vdatacenters.each do |datacenter|
+      VmwareVCenters[datacenter['id']] = datacenter['name']
+    end
+    clusters=getFromApi("/api/internal/vmware/compute_cluster")['data']
+    VmwareClusters = {}
+    clusters.each do |cluster|
+      VmwareClusters[cluster['id']] = cluster['name']
+    end
+    hosts=getFromApi("/api/v1/vmware/host")['data']
+    temphosts = Hash.nest
+    hosts.each do |host|
+      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      temphosts[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']]#[VmwareClusters[hd['computeClusterId']]]
+    end
+    Infrastructure = temphosts
+    hosts.each do |host|
+      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      if Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].empty?
+        Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]] = []
+      end
+      Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].push(host['id'])
+    end
+    logme("Core","Assembling Base Hashes","SLA Domains")
     Sla_hash = getSlaHash()
+    logme("Core","Assembling Base Hashes","Succeeded")
     # Read from csv file
     vmlist = CSV.read(Options.infile, {:headers => true})
     pool    = MigrateVM.pool(size: Options.threads.to_i)
     vmlist.map do |row|
       pool.future(:migrate_vm,row)
     end.map(&:value)
+  endTimer = Time.now
+  runtime = endTimer - Begintime
+  logme("END","END",endTimer.to_s + "|" + runtime.to_s)
 end
-
 
 if Options.sla then
   require 'getSlaHash.rb'
@@ -116,7 +160,7 @@ if Options.sla then
   require 'getVm.rb'
   sla_hash = getSlaHash()
   if Options.get then
-    effectiveSla = sla_hash[findVmItem(options.vm, 'effectiveSlaDomainId')]
+    effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
     # Get the SLA Domain for node
     puts "#{effectiveSla}"
   end
@@ -144,12 +188,12 @@ if Options.sla then
     if Options.assure == effectiveSla
       puts "Looks like its set"
     else
-      if sla_hash.invert[options.assure]
+      if sla_hash.invert[Options.assure]
         res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
         if !res.nil?
-	  res = JSON.parse(res)
-         # if res["effectiveSlaDomain"]["name"] == @options.assure
-         #   puts "#{@options.assure}"
+	         res = JSON.parse(res)
+         # if res["effectiveSlaDomain"]["name"] == @Options.assure
+         #   puts "#{@Options.assure}"
          # end
         else
           puts "Rubrik SLA Domain does NOT exist, cannot comply"

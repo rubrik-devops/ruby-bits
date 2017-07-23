@@ -12,9 +12,8 @@ def get_token()
     un=Options.u
     pw=Options.p
   else
-    require 'getCreds.rb'
     rh=Creds['rubrik']
-    sv = rh['server']
+    sv = rh['servers'].sample(1)[0]
     un = rh['username']
     pw = rh['password']
   end

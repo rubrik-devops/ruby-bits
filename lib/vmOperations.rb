@@ -1,11 +1,30 @@
 require 'rbvmomi'
+
+def renameVm(vcenter,vmobj)
+  vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
+  dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
+  vm = findvm(dc.vmFolder,vmobj['VMName'])
+  begin
+    vm.ReconfigVM_Task(:spec => RbVmomi::VIM::VirtualMachineConfigSpec(:name=> "#{vmobj['VMName']}-Migrated")).wait_for_completion
+    findvm( dc.vmFolder,"#{vmobj['VMName']}-Migrated")
+    logme("#{vm.name}","Rename Origin VM", "Succeeded")
+    vim.close
+  rescue
+    logme("#{vm.name}","Rename Origin VM", "Failed")
+  end
+end
+
 def shutdownVm(vcenter,vmobj)
   begin
+    startTimer = Time.now
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
     if vm.runtime.powerState == "poweredOff"
-      logme("#{vm.name}","Check Power State",vm.runtime.powerState.capitalize)
+      endTimer = Time.now
+      time = endTimer - startTimer
+      logme("#{vm.name}","Check Power State",vm.runtime.powerState.capitalize + "|" + time.to_s)
+      vim.close
       return
     end
     vm.ShutdownGuest
@@ -15,7 +34,10 @@ def shutdownVm(vcenter,vmobj)
   while vm.runtime.powerState == "poweredOn"
     logme("#{vm.name}","Ping",vm.runtime.powerState.capitalize)
   end
-  logme("#{vm.name}","Check Power State ", vm.runtime.powerState.capitalize)
+  endTimer = Time.now
+  time = endTimer - startTimer
+  logme("#{vm.name}","Check Power State ", vm.runtime.powerState.capitalize + "|" + time.to_s)
+  vim.close
 end
 
 def startVm(vcenter,vmobj)
@@ -56,13 +78,15 @@ def checkCD(vcenter,vmobj)
     )
     vm.ReconfigVM_Task(spec: spec).wait_for_completion
     logme("#{vm.name}","Reassigning VirtualCdrom", "Complete")
+    vim.close
   rescue StandardError=>e
-    logme("#{vm.name}","Reassigning VirtualCdrom", "#{e}")
+    logme("#{vm.name}","Reassigning VirtualCdrom", "VirtualCdrom Not Found")
   end
 end
 
 def vMotion(vcenter,vmobj)
   begin
+    startTimer = Time.now
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['toDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
@@ -74,13 +98,17 @@ def vMotion(vcenter,vmobj)
     while status != "success"
       status = vmotion_task.info.state
       if status != last_status
-        logme("#{vm.name}","VMotion Status",status.capitalize)
+        endTimer = Time.now
+        time = endTimer - startTimer
+        logme("#{vm.name}","VMotion Status",status.capitalize + "|" + time.to_s)
       end
       sleep 5
       last_status = status
       logme("#{vm.name}","Ping", status)
     end
+    vim.close
   rescue StandardError=>e
+    puts e
     logme("#{vm.name}","VMotion ERROR", "#{e}")
   end
 end
@@ -95,10 +123,9 @@ def checkManagedBy(vcenter,vmobj)
       task = vm.ReconfigVM_Task(spec: vm_cfg).wait_for_completion
       logme("#{vm.name}","Clear spec.managedBy", "Complete")
     elsif !vm.config.managedBy
-#      vm_cfg = {:managedBy => {:extensionKey => "vCloud Director-2",:type => "VirtualMachine"  } }
-#      task = vm.ReconfigVM_Task(spec: vm_cfg).wait_for_completion
       logme("#{vm.name}","Clear spec.managedBy", "Already Clear")
     end
+    vim.close
   rescue StandardError=>e
     logme("#{vm.name}","Clear spec.managedBy", "#{e}")
   end
@@ -109,13 +136,18 @@ def changePortGroup(vcenter,vmobj)
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
-    vm = findvm(dc.vmFolder,vmname)
-    pp vm
-    #vm.config.hardware.device.each do |x|
-    #  puts x.class
-    #end
-    net = vm.config.hardware.device.find { |hw| hw.class == RbVmomi::VIM::VirtualVmxnet3 }
-    # pp cd
+    dnic = vm.config.hardware.device.grep(RbVmomi::VIM::VirtualEthernetCard).find{|nic| nic.props}
+    if dnic[:connectable][:startConnected].eql?false
+        puts "Switch cloned NIC to: Connect at power on"
+        dnic[:connectable][:startConnected] = true
+        spec = RbVmomi::VIM.VirtualMachineConfigSpec({
+            :deviceChange => [{
+                :operation => :edit,
+                :device => dnic
+            }]
+        })
+        vm.ReconfigVM_Task(:spec => spec).wait_for_completion
+    end
   rescue StandardError=>e
     puts e
   end
@@ -131,7 +163,7 @@ def checkMaintenanceMode(vcenter,host,vmobj)
       return h.runtime.inMaintenanceMode.to_s
     end
   rescue StandardError=>e
-    logme("#{vm.name}","Checking host maintenance mode", "#{e}")
+    logme("#{vmobj['VMName']}","Checking host maintenance mode", "#{e}")
   end
 end
 
@@ -140,14 +172,14 @@ def findhost(folder,name)
   children = folder.children.find_all
   children.each do |child|
     if child.class == RbVmomi::VIM::HostSystem
-      if (child.itself.to_s.include?name)
+      if (child.to_s.include?name)
         found = child
       else
         next
       end
     elsif child.class == RbVmomi::VIM::ClusterComputeResource
       child.host.each do |x|
-        if (x.itself.to_s[name])
+        if (x.to_s[name])
           found = x
         else
           next
