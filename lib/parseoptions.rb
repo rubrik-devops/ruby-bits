@@ -81,6 +81,9 @@ class ParseOptions
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
+    opts.on('--relics [days]',"Remove Relic VMs after [n] days of inactivity") do |g|
+      options[:relics] = g;
+    end
     opts.separator ""
     opts.separator "Common options:"
     opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|

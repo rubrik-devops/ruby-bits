@@ -82,6 +82,26 @@ if Options.dr then
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
+if Options.relics
+  require 'getFromApi.rb'
+  require 'getVm.rb'
+  require 'setToApi.rb'
+  listData = getFromApi("/api/v1/vmware/vm?limit=9999&primary_cluster_id=local")["data"]
+  listData.each do |vm|
+    if vm['isRelic']
+      a = []
+      vmData = getFromApi("/api/v1/vmware/vm/#{vm['id']}")['snapshots']
+      vmData.each do |ss|
+        age = ((Date.parse Time.now.to_s) - (Date.parse ss['date'])).to_i
+        a.push(age)
+      end
+      if a.min && a.min >= Options.relics.to_i
+        puts "#{vm['name']} (#{vm['id']} is Relic : Newest Snapshot #{a.min} Days ago, DELETING ALL SNAPS"
+        setToApi("/api/v1/vmware/vm/#{vm['id']}/snapshot",'','delete')
+      end
+    end
+  end
+end
 
 if Options.sla then
   require 'getSlaHash.rb'
@@ -89,7 +109,7 @@ if Options.sla then
   require 'getVm.rb'
   sla_hash = getSlaHash()
   if Options.get then
-    effectiveSla = sla_hash[findVmItem(options.vm, 'effectiveSlaDomainId')]
+    effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
     # Get the SLA Domain for node
     puts "#{effectiveSla}"
   end
@@ -117,7 +137,7 @@ if Options.sla then
     if Options.assure == effectiveSla
       puts "Looks like its set"
     else
-      if sla_hash.invert[options.assure]
+      if sla_hash.invert[Options.assure]
         res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
         if !res.nil?
 	  res = JSON.parse(res)
