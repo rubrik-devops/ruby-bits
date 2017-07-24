@@ -29,15 +29,6 @@ class ParseOptions
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
-    opts.on('--drcsv', "Instant Recovery of a csv of clients") do |g|
-      options[:drcsv] = g;
-    end
-    opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
-      options[:infile] = g;
-    end
-    opts.on('-t', '--threads [string]', "Number of simultaneous migrations") do |t|
-      options[:threads] = t;
-    end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
       options[:sla] = g;
     end
