@@ -4,7 +4,7 @@ ruby-bits
 Generic ruby bits to be organized and used in chef/puppet environments
 
 # Overview:
-* Rubrik Framework for issuing commands in Ruby 
+* Rubrik Framework for issuing commands in Ruby
 
 # How to use:
 ```
@@ -39,6 +39,11 @@ Common options:
 ```
 
 # Examples:
+## Delete all snapshots for VMs if it's a Relic for over N days
+```
+Command - ruby .\rubrik.rb --relics [number of days] -u admin -p password -n my.rubrik.cluster
+DNP-Junk-SW (VirtualMachine:::d0394ed7-a4b3-4c5f-8ecc-5a8199fa007f-vm-3791 is Relic : Newest Snapshot 19 Days ago, DELETING ALL SNAPS
+```
 ## Get Disk Capacity Metrics from the Rubrik Cluster
 ```
 Command - ruby rubrik.rb -n my.rubrik.cluster -u admin -p password --metric --storage --json
@@ -77,4 +82,3 @@ SE-RMILLER-LINUX, Gold, d8a8430c-40de-4cb7-b834-bd0e7de40ed1, 5fca952e-d332-4419
 ```
 # Use Cases:
 * Submit new use cases please
-
