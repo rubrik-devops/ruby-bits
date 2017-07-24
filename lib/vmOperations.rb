@@ -131,7 +131,7 @@ def checkMaintenanceMode(vcenter,host,vmobj)
       return h.runtime.inMaintenanceMode.to_s
     end
   rescue StandardError=>e
-    logme("#{vm.name}","Checking host maintenance mode", "#{e}")
+    logme("#{vmobj['VMName']}","Checking host maintenance mode", "#{e}")
   end
 end
 
@@ -140,14 +140,14 @@ def findhost(folder,name)
   children = folder.children.find_all
   children.each do |child|
     if child.class == RbVmomi::VIM::HostSystem
-      if (child.itself.to_s.include?name)
+      if (child.to_s.include?name)
         found = child
       else
         next
       end
     elsif child.class == RbVmomi::VIM::ClusterComputeResource
       child.host.each do |x|
-        if (x.itself.to_s[name])
+        if (x.to_s[name])
           found = x
         else
           next

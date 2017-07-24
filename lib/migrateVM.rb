@@ -98,38 +98,44 @@ class MigrateVM
     end
 
 # Swap the PortGroup (Don't know how this happens yet)
-    logme("#{vmobj['VMName']}","Change Port Group","AIG TASK")
+  #  logme("#{vmobj['VMName']}","Change Port Group","AIG TASK")
   #  changePortGroup(vmobj['toVCenter'],Options.vcenteruser,Options.vcenterpw,vmobj['toDatacenter'],vmobj['VMName'])
 
 
 # Start the VM
-    startVm(Creds["toVCenter"],vmobj)
+#    startVm(Creds["toVCenter"],vmobj) # Move to after VMotion, leave powered off on rubrik. # Killed for test
 
 # VMotion to production storage
     logme("#{vmobj['VMName']}","VMotion from Rubrik","Started")
     vMotion(Creds["toVCenter"],vmobj)
 
 # Remove Instant Recover from Rubrik
-    recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
-    recovery_result.each do |r|
-      if r['rel'] == "result"
-        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/)
-        logme("#{vmobj['VMName']}","Remove Live Mount","#{mount}")
-        remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount}?force=true",'',"delete"))['id']
-        logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
-        remove_status = ''
-        last_remove_status = ''
-        while remove_status != "SUCCEEDED"
-          remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
-          if remove_status != last_remove_status
-            logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
-            sleep 10
-          end
-          last_remove_status = remove_status
-          logme("#{vmobj['VMName']}","Ping",remove_status)
-        end
-      end
-    end
+#    recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
+#    recovery_result.each do |r|
+#      mount = nil
+#      if r['rel'] == "result"
+#        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/).flatten
+#        pp mount
+#        puts mount
+#      end
+#      begin
+#        logme("#{vmobj['VMName']}","Remove Live Mount","Started")
+#        setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
+#      rescue StandardError=>e
+#        puts e
+#      end
+#      #remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
+#    #  logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
+#    #  remove_status = ''
+#    #  last_remove_status = ''
+#    #    remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
+#    #      logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
+#    #      sleep 10
+#    #    end
+#    #    last_remove_status = remove_status
+#    #    logme("#{vmobj['VMName']}","Ping",remove_status)
+#    #  end
+#    end
 
 # Refresh the vcenter
     refresh_vcenter = JSON.parse(setToApi('/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
@@ -146,9 +152,9 @@ class MigrateVM
     end
 
 # Reset the SLA Domain on the Recovered VM
-    logme("#{vmobj['VMName']}","Reset SLA Domain",effectiveSla)
-    id=findVmItem(vmobj['VMName'],'id')
-    setSla(id,effectiveSla)
+#    logme("#{vmobj['VMName']}","Reset SLA Domain",effectiveSla)
+#    id=findVmItem(vmobj['VMName'],'id')
+#    setSla(id,effectiveSla)
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}")
   end
 end
