@@ -25,11 +25,15 @@ Metric options:
         --incoming                   Return the number of currently incoming snapshots
         --runway                     Return the available runway in days
         --iostat [range]             Return iostat information for range (30sec, 60min, etc)
-        --archivebw [range]          Return archive bandwidth nformation for range (30sec, 60min, etc)
+        --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
+        --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
+        --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
+        --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
     -j, --json                       Output in JSON if possible
 
 Experimental options:
         --file                       Experimental - file search and recovery
+        --relics [days]              Remove Relic VMs after [n] days of inactivity
 
 Common options:
     -n, --node [Address]             Rubrik Cluster Address/FQDN
