@@ -82,33 +82,6 @@ if Options.dr then
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
-if Options.drcsv then
-    require 'CSV'
-    require 'getSlaHash.rb'
-    require 'getFromApi.rb'
-    require 'getVm.rb'
-    require 'uri'
-    require 'json'
-    require 'setToApi.rb'
-    require 'vmOperations.rb'
-    require 'migrateVM.rb'
-    require 'getCreds.rb'
-    Creds = getCreds();
-    vcenters=getFromApi("/api/v1/vmware/vcenter")
-    VmwareVCenters = {}
-    vcenters["data"].each do |vcenter|
-      VmwareVCenters[vcenter['id'].scan(/^.*\:+(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/)] = vcenter['name']
-    end
-    VmwareHosts=getFromApi("/api/v1/vmware/host")
-    Sla_hash = getSlaHash()
-    # Read from csv file
-    vmlist = CSV.read(Options.infile, {:headers => true})
-    pool    = MigrateVM.pool(size: Options.threads.to_i)
-    vmlist.map do |row|
-      pool.future(:migrate_vm,row)
-    end.map(&:value)
-end
-
 
 if Options.sla then
   require 'getSlaHash.rb'
