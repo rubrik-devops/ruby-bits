@@ -21,14 +21,14 @@ Specific options:
 
 Metric options:
         --metric                     Return Requested Metric
-                --storage                    Return storage capacity information
-                --incoming                   Return the number of currently incoming snapshots
-                --runway                     Return the available runway in days
-                --iostat [range]             Return iostat information for range (30sec, 60min, etc)
-                --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
-                --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
-                --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
-                --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
+            --storage                    Return storage capacity information
+            --incoming                   Return the number of currently incoming snapshots
+            --runway                     Return the available runway in days
+            --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+            --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
+            --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
+            --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
+            --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
     -j, --json                       Output in JSON if possible
 
 Experimental options:
