@@ -8,11 +8,14 @@ class MigrateVM
   def migrate_vm(vmobj)
     starttimerWork = Time.now
     logme("#{vmobj['VMName']}","Begin Workflow","#{self.current_actor}")
-    sleep(rand(5...120))
+    sleep(rand(5...300))
 
 # Rubrik Get token
     unless getFromApi('/api/v1/cluster/me')['id']
       (@token,@rubrikhost) = get_token()
+      logme("#{vmobj['VMName']}","Rubrik Token Refresh","#{@rubrikhost}:#{@token}")
+    else
+      logme("#{vmobj['VMName']}","Rubrik Token","#{@rubrikhost}:#{@token}")
     end
 
 # Shutdown the VM and monitor to completion
@@ -49,7 +52,6 @@ class MigrateVM
         sleep 5
       end
       last_snapshot_status = snapshot_status
-
       logme("#{vmobj['VMName']}","Ping",snapshot_status)
     end
 
@@ -103,7 +105,10 @@ class MigrateVM
 #    startVm(Creds["toVCenter"],vmobj)
 
 # Rubrik Get token
-    (@token,@rubrikhost) = get_token()
+    unless getFromApi('/api/v1/cluster/me')['id']
+      (@token,@rubrikhost) = get_token()
+      logme("#{vmobj['VMName']}","Rubrik Token Refresh","#{@rubrikhost}:#{@token}")
+    end
 
 # Remove Instant Recover from Rubrik
     logme("#{vmobj['VMName']}","Remove Live Mount","Started")
