@@ -29,8 +29,11 @@ class ParseOptions
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
-    opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
+    opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
       options[:sla] = g;
+    end
+    opts.on('--livemount [SLA]',"Perform Live Mount of all VMs in an SLA Domain") do |g|
+      options[:livemount] = g;
     end
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;

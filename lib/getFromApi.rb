@@ -1,13 +1,19 @@
 $LOAD_PATH.unshift File.expand_path('./', __FILE__)
 require 'getToken.rb'
 
-
 # Produce hash of VM Details based on search
 def getFromApi(p)
-  (t,sv) = get_token
-  conn = Faraday.new(:url => 'https://' + sv)
+  if Options.auth == 'token'
+    (t,sv) = get_token
+    conn = Faraday.new(:url => 'https://' + sv)
+    conn.authorization :Bearer, t
+  else
+    (u,pw,sv) = get_token
+    conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
+    conn.basic_auth u, pw
+    conn.headers['Authorization']
+  end
   conn.ssl.verify = false
-  conn.authorization :Bearer, t 
   response = conn.get p
   if response.status != 200
      msg = JSON.parse(response.body)['message']
@@ -15,7 +21,5 @@ def getFromApi(p)
   else
     o = JSON.parse(response.body)
     return o
-    # Logged in and returning token
   end
 end
-
