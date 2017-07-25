@@ -107,9 +107,7 @@ if Options.drcsv then
     require 'migrateVM.rb'
     logme("BEGIN","BEGIN",Begintime.to_s)
     logme("Core","Assembling Base Hashes","Started")
-    logme("Core","Assembling Base Hashes","Credentials")
-
-    (@token,@rubrikhost) = get_token()
+  #  (@token,@rubrikhost) = get_token()
     vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
     logme("Core","Assembling Base Hashes","Infrastsucture")
     VmwareVCenters = {}

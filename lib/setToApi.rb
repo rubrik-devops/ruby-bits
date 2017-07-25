@@ -4,27 +4,23 @@ require 'uri'
 
 def setToApi(endpoint,l,type)
   endpoint = URI.encode(endpoint)
-  @token.methods
-  unless @token.nil?
-    t = @token
-    sv = @rubrikhost
-  else
+  if Options.auth == 'token'
     (t,sv) = get_token
+    conn = Faraday.new(:url => 'https://' + sv)
+    conn.authorization :Bearer, t
+  else
+    (u,pw,sv) = get_token
+    conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
+    conn.basic_auth u, pw
+    conn.headers['Authorization']
   end
-  conn = Faraday.new(:url => 'https://' + sv)
   conn.ssl.verify = false
-  conn.authorization :Bearer, t
-#  conn.response :logger
   response = conn.public_send(type) do |req|
     req.url endpoint
     req.headers['Content-Type'] = 'application/json'
     req.body  = l.to_json
   end
   if response.status !~ /202|200/
-    #Raise error for failed login
-#    if msg = JSON.parse(response.body).message do
-#      raise "Rubrik - Error (#{msg})"
-#    end
     return response.body
   end
 end
