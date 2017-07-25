@@ -117,10 +117,9 @@ if Options.sla then
     listData = getFromApi("/api/v1/vmware/vm?limit=9999")
     listData['data'].each do |s|
       if s['effectiveSlaDomainName'] == Options.livemount
-        h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")
-        latestSnapshot =  h['data'][0]['id']
-        puts "Mounting #{s['name']} - #{h['data'][0]['date']}"
-        recovery_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "hostId" => "#{s['hostId']}"},"post"))['id']
+        h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")['data'][0]
+        puts "Mounting #{s['name']}  #{h['id']}  #{h['date']}"
+        setToApi('/api/v1/vmware/vm/snapshot/' + h['id'] + '/mount',{ "hostId" => "#{s['hostId']}", "powerOn" => false},"post")
       end
     end
   else

@@ -6,7 +6,7 @@ def setToApi(endpoint,l,type)
   endpoint = URI.encode(endpoint)
   if Options.auth == 'token'
     (t,sv) = get_token
-    conn = Faraday.new(:url => 'https://' + sv)
+    conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
     conn.authorization :Bearer, t
   else
     (u,pw,sv) = get_token

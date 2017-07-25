@@ -8,6 +8,16 @@ Generic ruby bits to be organized and used in chef/puppet environments
 
 # How to use:
 ```
+.creds - place in ruby-bits path
+
+{
+	"rubrik": {
+        	"servers":["ip","ip",...],
+        	"username": "[username]",
+        	"password": "[password]"
+	}
+}
+
 Usage: rubrik.rb [options]
 
 Specific options:
@@ -17,6 +27,7 @@ Specific options:
     -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
         --dr                         Instant Recovery of --client
         --sla                        Perform and SLA Operation (used with --get or --assure
+        --livemount [SLA]            Perform Live Mount of all VMs in an SLA Domain
         --list                       Audit SLA configuration (used with --sla)
 
 Metric options:
@@ -43,6 +54,11 @@ Common options:
 ```
 
 # Examples:
+## Live Mount all latest snapshots for each VM in a SLA Domain
+```
+Command - ruby .\rubrik.rb --sla --livemount Silver -u admin -p password -n my.rubrik.cluster
+Mounting win001  62553620-9fa0-4fa6-b626-113bc7519358  2017-07-25T18:51:44Z
+```
 ## Delete all snapshots for VMs if it's a Relic for over N days
 ```
 Command - ruby .\rubrik.rb --relics [number of days] -u admin -p password -n my.rubrik.cluster
