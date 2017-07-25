@@ -8,15 +8,15 @@ Generic ruby bits to be organized and used in chef/puppet environments
 
 # How to use:
 ```
-.creds - place in ruby-bits path
+.creds - JSON formatted configuration (or resort to including credentials in command line execution)
 
-{
-	"rubrik": {
-        	"servers":["ip","ip",...],
-        	"username": "[username]",
-        	"password": "[password]"
-	}
-}
+        {
+        	"rubrik": {
+                	"servers":["ip","ip",...],
+                	"username": "[username]",
+                	"password": "[password]"
+        	}
+        }
 
 Usage: rubrik.rb [options]
 
