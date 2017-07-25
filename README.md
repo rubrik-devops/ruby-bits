@@ -1,7 +1,7 @@
 ruby-bits
 ===============
 
-Generic ruby bits to be organized and used in chef/puppet environments
+Generic ruby bits to be organized and used in chef/puppet environments, and as a stand alone utility
 
 # Overview:
 * Rubrik Framework for issuing commands in Ruby
