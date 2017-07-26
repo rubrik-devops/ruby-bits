@@ -28,6 +28,7 @@ Specific options:
         --dr                         Instant Recovery of --client
         --sla                        Perform and SLA Operation (used with --get or --assure
         --list                       Audit SLA configuration (used with --sla)
+        --relics [days]              Remove Relic VMs after [n] days of inactivity
 
 Metric options:
         --metric                     Return Requested Metric
@@ -43,7 +44,6 @@ Metric options:
 
 Experimental options:
         --file                       Experimental - file search and recovery
-        --relics [days]              Remove Relic VMs after [n] days of inactivity
         --livemount [SLA]            Perform Live Mount of all VMs in an SLA Domain
 
 Common options:
@@ -54,7 +54,7 @@ Common options:
 ```
 
 # Examples:
-## Live Mount all latest snapshots for each VM in a SLA Domain
+## Live Mount all latest snapshots for each VM in a SLA Domain - Experimental
 ```
 Command - ruby .\rubrik.rb --sla --livemount Silver -u admin -p password -n my.rubrik.cluster
 Mounting win001  62553620-9fa0-4fa6-b626-113bc7519358  2017-07-25T18:51:44Z
