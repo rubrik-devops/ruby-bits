@@ -120,6 +120,7 @@ if Options.sla then
         h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")['data'][0]
         puts "Mounting #{s['name']}  #{h['id']}  #{h['date']}"
         setToApi('/api/v1/vmware/vm/snapshot/' + h['id'] + '/mount',{ "hostId" => "#{s['hostId']}", "powerOn" => false},"post")
+        sleep 5
       end
     end
   else
