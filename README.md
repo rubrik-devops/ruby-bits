@@ -27,7 +27,6 @@ Specific options:
     -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
         --dr                         Instant Recovery of --client
         --sla                        Perform and SLA Operation (used with --get or --assure
-        --livemount [SLA]            Perform Live Mount of all VMs in an SLA Domain
         --list                       Audit SLA configuration (used with --sla)
 
 Metric options:
@@ -45,6 +44,7 @@ Metric options:
 Experimental options:
         --file                       Experimental - file search and recovery
         --relics [days]              Remove Relic VMs after [n] days of inactivity
+        --livemount [SLA]            Perform Live Mount of all VMs in an SLA Domain
 
 Common options:
     -n, --node [Address]             Rubrik Cluster Address/FQDN
