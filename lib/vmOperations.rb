@@ -20,6 +20,7 @@ def shutdownVm(vcenter,vmobj)
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
+    puts vm.name
     if vm.runtime.powerState == "poweredOff"
       endTimer = Time.now
       time = endTimer - startTimer
@@ -134,22 +135,31 @@ end
 def changePortGroup(vcenter,vmobj)
   begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
-    dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
+    dc = vim.serviceInstance.find_datacenter(vmobj['toDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
+    port = dc.network.select{ |pg| pg.name == vmobj['toPortGroup'] }
     dnic = vm.config.hardware.device.grep(RbVmomi::VIM::VirtualEthernetCard).find{|nic| nic.props}
+    pp dnic
     if dnic[:connectable][:startConnected].eql?false
-        puts "Switch cloned NIC to: Connect at power on"
-        dnic[:connectable][:startConnected] = true
-        spec = RbVmomi::VIM.VirtualMachineConfigSpec({
-            :deviceChange => [{
-                :operation => :edit,
-                :device => dnic
-            }]
-        })
-        vm.ReconfigVM_Task(:spec => spec).wait_for_completion
+      dnic[:connectable][:startConnected] = true
+      dnic[:backing][:port][:portgroupKey] = port[0].key
+      dnic[:backing][:port][:portKey] = ''
+      dnic[:backing][:useAutoDetect] = true
+      dnic[:backing][:port][:switchUuid] = port[0].config.distributedVirtualSwitch.uuid
+      spec = RbVmomi::VIM.VirtualMachineConfigSpec({
+          :deviceChange => [{
+              :operation => :edit,
+              :device => dnic
+          }]
+      })
+      pp dnic
+      vm.ReconfigVM_Task(:spec => spec).wait_for_completion
+      logme("#{vmobj['VMName']}","Set NIC to CaPO", "Succeeded")
+    else
+      logme("#{vmobj['VMName']}","Set NIC to CaPO", "Succeeded")
     end
   rescue StandardError=>e
-    puts e
+    logme("#{vmobj['VMName']}","Set NIC to CaPO", "#{e}")
   end
 end
 

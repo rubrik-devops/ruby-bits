@@ -109,7 +109,7 @@ if Options.drcsv then
     logme("Core","Assembling Base Hashes","Started")
   #  (@token,@rubrikhost) = get_token()
     vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
-    logme("Core","Assembling Base Hashes","Infrastsucture")
+    logme("Core","Assembling Base Hashes","Infrastructure")
     VmwareVCenters = {}
     vcenters.each do |vcenter|
       VmwareVCenters[vcenter['id']] = vcenter['hostname']

@@ -9,14 +9,6 @@ class MigrateVM
     starttimerWork = Time.now
     logme("#{vmobj['VMName']}","Begin Workflow","#{self.current_actor}")
 
-# Rubrik Get token
-#    unless getFromApi('/api/v1/cluster/me')['id']
-#      (@token,@rubrikhost) = get_token()
-#      logme("#{vmobj['VMName']}","Rubrik Token Refresh","#{@rubrikhost}:#{@token}")
-#    else
-#      logme("#{vmobj['VMName']}","Rubrik Token","#{@rubrikhost}:#{@token}")
-#    end
-
 # Shutdown the VM and monitor to completion
     logme("#{vmobj['VMName']}","Checking Power State","Started")
     shutdownVm(Creds["fromVCenter"],vmobj)
@@ -93,20 +85,14 @@ class MigrateVM
 
 
 # Swap the PortGroup (Don't know how this happens yet)
-    logme("#{vmobj['VMName']}","Change Port Group","AIG TASK")
-#  changePortGroup(vmobj['toVCenter'],Options.vcenteruser,Options.vcenterpw,vmobj['toDatacenter'],vmobj['VMName'])
+    logme("#{vmobj['VMName']}","Change Port Group","Started")
+    changePortGroup(Creds["toVCenter"],vmobj)
 
 # Set Network Connect on Power
     logme("#{vmobj['VMName']}","Connect Network on Power","NOT DONE")
 
 # Start the VM
 #    startVm(Creds["toVCenter"],vmobj)
-
-# Rubrik Get token
-#    unless getFromApi('/api/v1/cluster/me')['id']
-#      (@token,@rubrikhost) = get_token()
-#      logme("#{vmobj['VMName']}","Rubrik Token Refresh","#{@rubrikhost}:#{@token}")
-#    end
 
 # Remove Instant Recover from Rubrik
     logme("#{vmobj['VMName']}","Remove Live Mount","Started")
@@ -117,38 +103,7 @@ class MigrateVM
         mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/).flatten
         setToApi("/api/v1/vmware/vm/snapshot/mount/"+mount[0],"","delete")
       end
-      #remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
-    #  logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
-    #  remove_status = ''
-    #  last_remove_status = ''
-    #  while remove_status != "SUCCEEDED"
-    #    remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
-    #      logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
-    #      sleep 10
-    #    end
-    #    last_remove_status = remove_status
-    #    logme("#{vmobj['VMName']}","Ping",remove_status)
-    #  end
     end
-
-# Refresh the vcenter
-#    refresh_vcenter = JSON.parse(setToApi('/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
-#    refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
-#    last_refresh_status = refresh_status
-#    while refresh_status != "SUCCEEDED"
-#      refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
-#      if refresh_status != last_refresh_status
-#        logme("#{vmobj['VMName']}","Updating VCenter Data",refresh_status.capitalize)
-#        sleep 10
-#      end
-#      last_refresh_status = refresh_status
-#      logme("#{vmobj['VMName']}","Ping",refresh_status)
-#    end
-
-# Reset the SLA Domain on the Recovered VM
-#    logme("#{vmobj['VMName']}","Reset SLA Domain",effectiveSla)
-#    id=findVmItem(vmobj['VMName'],'id')
-#    setSla(id,effectiveSla)
     timeWork = Time.now - starttimerWork
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}|" + timeWork.to_s)
   end
