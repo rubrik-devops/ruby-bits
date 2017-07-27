@@ -20,7 +20,6 @@ def shutdownVm(vcenter,vmobj)
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
     dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
-    puts vm.name
     if vm.runtime.powerState == "poweredOff"
       endTimer = Time.now
       time = endTimer - startTimer
@@ -139,7 +138,6 @@ def changePortGroup(vcenter,vmobj)
     vm = findvm(dc.vmFolder,vmobj['VMName'])
     port = dc.network.select{ |pg| pg.name == vmobj['toPortGroup'] }
     dnic = vm.config.hardware.device.grep(RbVmomi::VIM::VirtualEthernetCard).find{|nic| nic.props}
-    pp dnic
     if dnic[:connectable][:startConnected].eql?false
       dnic[:connectable][:startConnected] = true
       dnic[:backing][:port][:portgroupKey] = port[0].key
@@ -152,7 +150,6 @@ def changePortGroup(vcenter,vmobj)
               :device => dnic
           }]
       })
-      pp dnic
       vm.ReconfigVM_Task(:spec => spec).wait_for_completion
       logme("#{vmobj['VMName']}","Set NIC to CaPO", "Succeeded")
     else
