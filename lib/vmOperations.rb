@@ -43,7 +43,7 @@ end
 def startVm(vcenter,vmobj)
   begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
-    dc = vim.serviceInstance.find_datacenter(vmobj['fromDatacenter']) || fail('datacenter not found')
+    dc = vim.serviceInstance.find_datacenter(vmobj['toDatacenter']) || fail('datacenter not found')
     vm = findvm(dc.vmFolder,vmobj['VMName'])
     if vm.runtime.powerState == "poweredOn"
       logme("#{vm.name}","Check Power State", vm.runtime.powerState.capitalize)
@@ -151,12 +151,12 @@ def changePortGroup(vcenter,vmobj)
           }]
       })
       vm.ReconfigVM_Task(:spec => spec).wait_for_completion
-      logme("#{vmobj['VMName']}","Set NIC to CaPO", "Succeeded")
+      logme("#{vmobj['VMName']}","Change Port Group", "Succeeded")
     else
-      logme("#{vmobj['VMName']}","Set NIC to CaPO", "Succeeded")
+      logme("#{vmobj['VMName']}","Change Port Group", "Succeeded")
     end
   rescue StandardError=>e
-    logme("#{vmobj['VMName']}","Set NIC to CaPO", "#{e}")
+    logme("#{vmobj['VMName']}","Change Port Group", "#{e}")
   end
 end
 

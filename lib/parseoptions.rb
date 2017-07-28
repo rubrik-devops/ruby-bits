@@ -32,6 +32,9 @@ class ParseOptions
     opts.on('--drcsv', "Instant Recovery of a csv of clients") do |g|
       options[:drcsv] = g;
     end
+    opts.on('-s', "Startup VM before vMotion (Defaults to After)") do |g|
+      options[:startbeforevmotion] = g;
+    end
     opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
       options[:infile] = g;
     end

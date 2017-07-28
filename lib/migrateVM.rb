@@ -79,20 +79,24 @@ class MigrateVM
       logme("#{vmobj['VMName']}","Ping",recovery_status)
     end
 
+# Swap the PortGroup (Don't know how this happens yet)
+    logme("#{vmobj['VMName']}","Change Port Group","Started")
+    changePortGroup(Creds["toVCenter"],vmobj)
+    sleep 5
+
+# Start the VM
+    if Options.startbeforevmotion
+      startVm(Creds["toVCenter"],vmobj)
+    end
+
 # VMotion to production storage
     logme("#{vmobj['VMName']}","VMotion from Rubrik","Started")
     vMotion(Creds["toVCenter"],vmobj)
 
-
-# Swap the PortGroup (Don't know how this happens yet)
-    logme("#{vmobj['VMName']}","Change Port Group","Started")
-    changePortGroup(Creds["toVCenter"],vmobj)
-
-# Set Network Connect on Power
-    logme("#{vmobj['VMName']}","Connect Network on Power","NOT DONE")
-
 # Start the VM
-#    startVm(Creds["toVCenter"],vmobj)
+    if !Options.startbeforevmotion
+      startVm(Creds["toVCenter"],vmobj)
+    end
 
 # Remove Instant Recover from Rubrik
     logme("#{vmobj['VMName']}","Remove Live Mount","Started")

@@ -11,14 +11,15 @@ class Hash
    end
 end
   Creds = getCreds();
-  Begintime=Time.now.to_i
+  Begintime=Time.now
+  Logtime=Begintime.to_i
 # Global options
 Options = ParseOptions.parse(ARGV)
 def logme(machine,topic,detail)
   time=Time.now
   timepx=time.to_i
   return if topic == "Ping"
-  File.open(Begintime.to_s + ".txt", 'a') { |f| f.write("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail + "\n") }
+  File.open(Logtime.to_s + ".txt", 'a') { |f| f.write("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail + "\n") }
   puts("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail)
 end
 # Grab the SLAHash to make pretty names
