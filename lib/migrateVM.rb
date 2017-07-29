@@ -45,69 +45,70 @@ class MigrateVM
       logme("#{vmobj['VMName']}","Ping",snapshot_status)
     end
 
-# Rename the original VM
-    logme("#{vmobj['VMName']}","Renaming Origin VM","Bypassed for tests")
-#    renameVm(Creds["fromVCenter"],vmobj)
+    if !Options.short
+  # Rename the original VM
+      logme("#{vmobj['VMName']}","Renaming Origin VM","Bypassed for tests")
+  #    renameVm(Creds["fromVCenter"],vmobj)
 
 
-# Retrieve the latest snaphot it Instant Recover
-    h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
-    latestSnapshot =  h['data'][0]['id']
-    logme("#{vmobj['VMName']}","Get Snapshot ID",latestSnapshot)
+  # Retrieve the latest snaphot it Instant Recover
+      h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
+      latestSnapshot =  h['data'][0]['id']
+      logme("#{vmobj['VMName']}","Get Snapshot ID",latestSnapshot)
 
-# Need to get rubrik host ids for clustername
-    myh=Infrastructure[vmobj['toVCenter']][vmobj['toDatacenter']][vmobj['toCluster']].sample(1)[0]
-    logme("#{vmobj['VMName']}","Assign New Host","#{myh}")
+  # Need to get rubrik host ids for clustername
+      myh=Infrastructure[vmobj['toVCenter']][vmobj['toDatacenter']][vmobj['toCluster']].sample(1)[0]
+      logme("#{vmobj['VMName']}","Assign New Host","#{myh}")
 
-# Instant Recover the VM
-    logme("#{vmobj['VMName']}","Request Instant Recovery",id)
-    startTimer = Time.now
-    recovery_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/mount',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}", "disableNetwork" => false, "removeNetworkDevices" => false, "powerOn" => false},"post"))['id']
-    logme("#{vmobj['VMName']}","Instant Recovery Request",recovery_job)
-    recovery_status = ''
-    last_recovery_status = ''
-    while recovery_status != "SUCCEEDED"
-      recovery_status = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['status']
-      if recovery_status != last_recovery_status
-        endTimer = Time.now
-        time = endTimer - startTimer
-        logme("#{vmobj['VMName']}","Monitor Recovery",recovery_status.capitalize + "|" + time.to_s)
-        sleep 5
+  # Instant Recover the VM
+      logme("#{vmobj['VMName']}","Request Export",id)
+      startTimer = Time.now
+    #  recovery_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/mount',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}", "disableNetwork" => false, "removeNetworkDevices" => false, "powerOn" => false},"post"))['id']
+      recovery_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/export',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}", "datastoreId" => "#{VmwareDatastores[vmobj['toDatastore']]}", "disableNetwork" => false, "removeNetworkDevices" => false, "powerOn" => false},"post"))['id']
+      logme("#{vmobj['VMName']}","Export Request Job ",recovery_job)
+      recovery_status = ''
+      last_recovery_status = ''
+      while recovery_status != "SUCCEEDED"
+        recovery_status = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['status']
+        if recovery_status != last_recovery_status
+          endTimer = Time.now
+          time = endTimer - startTimer
+          logme("#{vmobj['VMName']}","Monitor Export",recovery_status.capitalize + "|" + time.to_s)
+          sleep 5
+        end
+        last_recovery_status = recovery_status
+        logme("#{vmobj['VMName']}","Ping",recovery_status)
       end
-      last_recovery_status = recovery_status
 
-      logme("#{vmobj['VMName']}","Ping",recovery_status)
+  # Swap the PortGroup (Don't know how this happens yet)
+      logme("#{vmobj['VMName']}","Change Port Group","Started")
+      changePortGroup(Creds["toVCenter"],vmobj)
+      sleep 5
+
+  # Start the VM
+  #    if Options.startbeforevmotion
+  #      startVm(Creds["toVCenter"],vmobj)
+  #    end
+
+  # VMotion to production storage
+  #    logme("#{vmobj['VMName']}","VMotion from Rubrik","Started")
+  #    vMotion(Creds["toVCenter"],vmobj)
+
+  # Start the VM
+      if !Options.startbeforevmotion
+        startVm(Creds["toVCenter"],vmobj)
+      end
     end
-
-# Swap the PortGroup (Don't know how this happens yet)
-    logme("#{vmobj['VMName']}","Change Port Group","Started")
-    changePortGroup(Creds["toVCenter"],vmobj)
-    sleep 5
-
-# Start the VM
-    if Options.startbeforevmotion
-      startVm(Creds["toVCenter"],vmobj)
-    end
-
-# VMotion to production storage
-    logme("#{vmobj['VMName']}","VMotion from Rubrik","Started")
-    vMotion(Creds["toVCenter"],vmobj)
-
-# Start the VM
-    if !Options.startbeforevmotion
-      startVm(Creds["toVCenter"],vmobj)
-    end
-
 # Remove Instant Recover from Rubrik
-    logme("#{vmobj['VMName']}","Remove Live Mount","Started")
-    recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
-    recovery_result.each do |r|
-      mount = nil
-      if r['rel'] == "result"
-        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/).flatten
-        setToApi("/api/v1/vmware/vm/snapshot/mount/"+mount[0],"","delete")
-      end
-    end
+#    logme("#{vmobj['VMName']}","Remove Live Mount","Started")
+#    recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
+#    recovery_result.each do |r|
+#      mount = nil
+#      if r['rel'] == "result"
+#        mount = r['href'].scan(/^.*(\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$)/).flatten
+#        setToApi("/api/v1/vmware/vm/snapshot/mount/"+mount[0],"","delete")
+#      end
+#    end
     timeWork = Time.now - starttimerWork
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}|" + timeWork.to_s)
   end

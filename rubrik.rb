@@ -109,8 +109,13 @@ if Options.drcsv then
     logme("BEGIN","BEGIN",Begintime.to_s)
     logme("Core","Assembling Base Hashes","Started")
   #  (@token,@rubrikhost) = get_token()
-    vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
+    datastores=getFromApi("/api/internal/vmware/datastore")['data']
     logme("Core","Assembling Base Hashes","Infrastructure")
+    VmwareDatastores = {}
+    datastores.each do |datastore|
+      VmwareDatastores[datastore['name']] = datastore['id']
+    end
+    vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
     VmwareVCenters = {}
     vcenters.each do |vcenter|
       VmwareVCenters[vcenter['id']] = vcenter['hostname']
