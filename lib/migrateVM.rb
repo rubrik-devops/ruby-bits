@@ -56,8 +56,14 @@ class MigrateVM
       latestSnapshot =  h['data'][0]['id']
       logme("#{vmobj['VMName']}","Get Snapshot ID",latestSnapshot)
 
-  # Need to get rubrik host ids for clustername
-      myh=Infrastructure[vmobj['toVCenter']][vmobj['toDatacenter']][vmobj['toCluster']].sample(1)[0]
+  # Need to get rubrik host ids for clustername - write something in here to get hostname and check maintenance mode
+      myhosts = Infrastructure[vmobj['toVCenter']][vmobj['toDatacenter']][vmobj['toCluster']]
+      Infrastructure[vmobj['toVCenter']][vmobj['toDatacenter']][vmobj['toCluster']].each do |h|
+        if checkMaintenanceMode(Creds['toVCenter'],VmwareHosts[h],vmobj)
+           myhosts=myhosts.delete(h)
+        end
+      end
+      myh=myhosts.sample(1)[0]
       logme("#{vmobj['VMName']}","Assign New Host","#{myh}")
 
   # Instant Recover the VM
@@ -111,5 +117,8 @@ class MigrateVM
 #    end
     timeWork = Time.now - starttimerWork
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}|" + timeWork.to_s)
+    if !Options.startbeforevmotion
+      startVm(Creds["toVCenter"],vmobj)
+    end
   end
 end

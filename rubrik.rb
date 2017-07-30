@@ -138,6 +138,7 @@ if Options.drcsv then
     end
     Infrastructure = temphosts
     hosts.each do |host|
+      VmwareHosts[host['id']] = host['name']
       hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
       if Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].empty?
         Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]] = []
