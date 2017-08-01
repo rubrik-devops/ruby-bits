@@ -20,20 +20,23 @@ class ParseOptions
     opts.on('-c', '--client [name]', "Name of Virtual Machine to perform operation for") do |c|
       options[:vm] = c;
     end
-    opts.on('-g', '--get',"Perform GET operation") do |g|
-      options[:get] = g;
-    end
-    opts.on('-a', '--assure [string]',"String to set in SET operation (in case of --sla, it's the SLA Name)") do |g|
-      options[:assure] = g;
-    end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
       options[:sla] = g;
     end
+    opts.on('-g', '--get',"Perform GET operation") do |g|
+      options[:get] = g;
+    end
+    opts.on('-a', '--assure [string]',"SLA Name to set VM to)") do |g|
+      options[:assure] = g;
+    end
     opts.on('--livemount [SLA]',"Perform Live Mount of all VMs in an SLA Domain") do |g|
       options[:livemount] = g;
+    end
+    opts.on('--unmount',"Umount all currently Live Mounted VMs in an SLA Domain") do |g|
+      options[:unmount] = g;
     end
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;

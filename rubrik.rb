@@ -113,14 +113,24 @@ if Options.sla then
   require 'setToApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
-  if Options.livemount then
-    listData = getFromApi("/api/v1/vmware/vm?limit=9999")
-    listData['data'].each do |s|
-      if s['effectiveSlaDomainName'] == Options.livemount
-        h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")['data'][0]
-        puts "Mounting #{s['name']}  #{h['id']}  #{h['date']}"
-        setToApi('/api/v1/vmware/vm/snapshot/' + h['id'] + '/mount',{ "hostId" => "#{s['hostId']}", "powerOn" => false},"post")
-        sleep 5
+  if Options.livemount
+    if Options.unmount
+      h=getFromApi("/api/v1/vmware/vm/snapshot/mount")['data']
+      h.each do |m|
+        if getFromApi("/api/v1/vmware/vm/" + m['vmId'])['effectiveSlaDomain']['name'] == Options.livemount
+          puts "Unmounting '" + getFromApi("/api/v1/vmware/vm/" + m['mountedVmId'])['name'] + "'"
+          setToApi('/api/v1/vmware/vm/snapshot/mount/' + m['id'],'',"delete")
+        end
+      end
+    else
+      listData = getFromApi("/api/v1/vmware/vm?limit=9999")
+      listData['data'].each do |s|
+        if s['effectiveSlaDomainName'] == Options.livemount
+          h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")['data'][0]
+          puts "Mounting #{s['name']}  #{h['id']}  #{h['date']}"
+          setToApi('/api/v1/vmware/vm/snapshot/' + h['id'] + '/mount',{ "hostId" => "#{s['hostId']}", "powerOn" => true},"post")
+          sleep 5
+        end
       end
     end
   else
