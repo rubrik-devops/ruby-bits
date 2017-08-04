@@ -13,34 +13,48 @@ class ParseOptions
     opts.banner = "Usage: rubrik.rb [options]"
 
     opts.separator ""
-    opts.separator "Specific options:"
-    opts.on('-l', '--login', "Perform no operations but return authentication token") do |login|
-      options[:login] = login;
+    opts.separator "Common options:"
+    opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
+      options[:n] = node;
     end
+    opts.on('-u', '--username [username]',"Rubrik Cluster Username") do |user|
+      options[:u] = user;
+    end
+    opts.on('-p', '--password [password]', "Rubrik Cluster Password") do |pass|
+      options[:p] = pass;
+    end
+
+    opts.separator ""
+    opts.separator "Specific options:"
     opts.on('-c', '--client [name]', "Name of Virtual Machine to perform operation for") do |c|
       options[:vm] = c;
     end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
+    opts.on('--relics [days]',"Remove Relic VMs after [n] days of inactivity") do |g|
+      options[:relics] = g;
+    end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
       options[:sla] = g;
     end
-    opts.on('-g', '--get',"Perform GET operation") do |g|
-      options[:get] = g;
-    end
-    opts.on('-a', '--assure [string]',"SLA Name to set VM to)") do |g|
-      options[:assure] = g;
-    end
-    opts.on('--livemount [SLA]',"Perform Live Mount of all VMs in an SLA Domain") do |g|
-      options[:livemount] = g;
-    end
-    opts.on('--unmount',"Umount all currently Live Mounted VMs in an SLA Domain") do |g|
-      options[:unmount] = g;
-    end
-    opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
+    opts.on('--list', "Audit SLA configuration") do |g|
       options[:list] = g;
     end
+    opts.on('-g', '--get',"Get Current SLA for [client]") do |g|
+      options[:get] = g;
+    end
+    opts.on('-a', '--assure [string]',"Set SLA for [client])") do |g|
+      options[:assure] = g;
+    end
+    opts.on('--livemount [SLA]',"Perform Live Mount of all VMs in [SLA] Domain") do |g|
+      options[:livemount] = g;
+    end
+    opts.on('--unmount',"Umount all currently Live Mounted VMs in [SLA] Domain") do |g|
+      options[:unmount] = g;
+    end
+
+
     opts.separator ""
     opts.separator "Metric options:"
     opts.on('--metric', "Return Requested Metric") do |g|
@@ -78,20 +92,8 @@ class ParseOptions
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
-    opts.on('--relics [days]',"Remove Relic VMs after [n] days of inactivity") do |g|
-      options[:relics] = g;
-    end
-    opts.separator ""
-    opts.separator "Common options:"
-    opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
-      options[:n] = node;
-    end
-    opts.on('-u', '--username [username]',"Rubrik Cluster Username") do |user|
-      options[:u] = user;
-    end
-    opts.on('-p', '--password [password]', "Rubrik Cluster Password") do |pass|
-      options[:p] = pass;
-    end
+
+
     opts.on_tail("-h", "--help", "Show this message") do
     puts opts
     exit
