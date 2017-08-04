@@ -54,12 +54,18 @@ Common options:
 ```
 
 # Examples:
-## Live Mount all latest snapshots for each VM in a SLA Domain - Experimental
+## Live Mount all latest snapshots for each VM in a SLA Domain
+### Live Mount
 ```
 Command - ruby .\rubrik.rb --sla --livemount Silver -u admin -p password -n my.rubrik.cluster
-Mounting win001  62553620-9fa0-4fa6-b626-113bc7519358  2017-07-25T18:51:44Z
+Mounting win018  19e38c78-e10d-4c06-a009-3de2da2cb41f  2017-08-01T13:04:35Z
 ```
-## Delete all snapshots for VMs if it's a Relic for over N days
+### Unmount
+```
+Command - ruby .\rubrik.rb --sla --livemount Silver --unmount -u admin -p password -n my.rubrik.cluster
+Unmounting 'win018 08-01 13:04 2'
+```
+## Delete all snapshots for VMs if Relic for over N days
 ```
 Command - ruby .\rubrik.rb --relics [number of days] -u admin -p password -n my.rubrik.cluster
 DNP-Junk-SW (VirtualMachine:::d0394ed7-a4b3-4c5f-8ecc-5a8199fa007f-vm-3791 is Relic : Newest Snapshot 19 Days ago, DELETING ALL SNAPS
