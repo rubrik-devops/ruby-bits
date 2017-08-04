@@ -33,8 +33,8 @@ Generic ruby bits to be organized and used in chef/puppet environments, and as a
                 --relics [days]              Remove Relic VMs after [n] days of inactivity
                 --sla                        Perform and SLA Operation (used with --get or --assure or --livemount
                     --list                       Audit SLA configuration
-                    -g, --get                        Get Current SLA for [client]
-                    -a, --assure [string]            Set SLA for [client])
+                    -g, --get                    Get Current SLA for [client]
+                    -a, --assure [string]        Set SLA for [client])
                     --livemount [SLA]            Perform Live Mount of all VMs in [SLA] Domain
                         --unmount                    Umount all currently Live Mounted VMs in [SLA] Domain
 
@@ -49,7 +49,7 @@ Generic ruby bits to be organized and used in chef/puppet environments, and as a
                     --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
                     --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
                         -j, --json                       Output in JSON if possible
-        
+
         Experimental options:
                 --file                       Experimental - file search and recovery
 ```
