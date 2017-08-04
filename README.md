@@ -18,39 +18,40 @@ Generic ruby bits to be organized and used in chef/puppet environments, and as a
         	}
         }
 
-Usage: rubrik.rb [options]
 
-Specific options:
-    -l, --login                      Perform no operations but return authentication token
-    -c, --client [name]              Name of Virtual Machine to perform operation for
-    -g, --get                        Perform GET operation
-    -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
-        --dr                         Instant Recovery of --client
-        --sla                        Perform and SLA Operation (used with --get or --assure
-        --list                       Audit SLA configuration (used with --sla)
-        --relics [days]              Remove Relic VMs after [n] days of inactivity
+        Usage: rubrik.rb [options]
 
-Metric options:
-        --metric                     Return Requested Metric
-            --storage                    Return storage capacity information
-            --incoming                   Return the number of currently incoming snapshots
-            --runway                     Return the available runway in days
-            --iostat [range]             Return iostat information for range (30sec, 60min, etc)
-            --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
-            --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
-            --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
-            --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
-    -j, --json                       Output in JSON if possible
+        Common options:
+            -n, --node [Address]             Rubrik Cluster Address/FQDN
+            -u, --username [username]        Rubrik Cluster Username
+            -p, --password [password]        Rubrik Cluster Password
+            -h, --help                       Show this message
 
-Experimental options:
-        --file                       Experimental - file search and recovery
-        --livemount [SLA]            Perform Live Mount of all VMs in an SLA Domain
+        Specific options:
+            -c, --client [name]              Name of Virtual Machine to perform operation for
+                --dr                         Instant Recovery of --client
+                --relics [days]              Remove Relic VMs after [n] days of inactivity
+                --sla                        Perform and SLA Operation (used with --get or --assure or --livemount
+                    --list                       Audit SLA configuration
+                    -g, --get                        Get Current SLA for [client]
+                    -a, --assure [string]            Set SLA for [client])
+                    --livemount [SLA]            Perform Live Mount of all VMs in [SLA] Domain
+                        --unmount                    Umount all currently Live Mounted VMs in [SLA] Domain
 
-Common options:
-    -n, --node [Address]             Rubrik Cluster Address/FQDN
-    -u, --username [username]        Rubrik Cluster Username
-    -p, --password [password]        Rubrik Cluster Password
-    -h, --help                       Show this message
+        Metric options:
+                --metric                     Return Requested Metric
+                    --storage                    Return storage capacity information
+                    --incoming                   Return the number of currently incoming snapshots
+                    --runway                     Return the available runway in days
+                    --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+                    --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
+                    --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
+                    --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
+                    --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
+                        -j, --json                       Output in JSON if possible
+        
+        Experimental options:
+                --file                       Experimental - file search and recovery
 ```
 
 # Examples:

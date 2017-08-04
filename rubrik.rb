@@ -4,7 +4,6 @@ require 'pp'
 require 'getCreds.rb'
 require 'json'
 
-# Global options
 Options = ParseOptions.parse(ARGV)
 Creds = getCreds();
 
@@ -14,12 +13,11 @@ def logme(machine,topic,detail)
   File.open('out.log', 'a') { |f| f.write("#{time} : " + machine + " : " + topic + " : " + detail + "\n") }
   puts("#{time} : " + machine + " : " + topic + " : " + detail)
 end
-# Grab the SLAHash to make pretty names
+
 if Options.file then
   if Options.assure then
     require 'getVm.rb'
     require 'uri'
-    # do some file workflow
     ss = URI.encode(Options.assure.to_s)
     managedId=findVmItem(Options.vm,'managedId')
     h=getFromApi("/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
@@ -74,13 +72,10 @@ if Options.dr then
     require 'uri'
     require 'json'
     require 'setToApi.rb'
-    #Get Cluster ID
     clusterInfo=getFromApi("/api/v1/cluster/me")
     id=findVmItem(Options.vm,'id')
-    #Get Latest Snapshot
     h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
     latestSnapshot =  h['data'][0]['id']
-    #Get vmWare Hosts for the Cluster
     hostList = Array.new
     o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
@@ -135,9 +130,13 @@ if Options.sla then
     end
   else
     if Options.get then
-      effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
-      # Get the SLA Domain for node
-      puts "#{effectiveSla}"
+      eSLA = findVmItem(Options.vm, 'effectiveSlaDomainId')
+      if eSLA
+        puts "#{sla_hash[eSLA]}"
+      else
+        puts "VM Not Found"
+      end
+      exit
     end
     if Options.list then
       listData = getFromApi("/api/v1/vmware/vm?limit=9999")
@@ -157,24 +156,26 @@ if Options.sla then
       end
       exit
     end
-    effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
-    if Options.assure && (effectiveSla != Options.assure) then
-      require 'setSla.rb'
-      if Options.assure == effectiveSla
-        puts "Looks like its set"
-      else
-        if sla_hash.invert[Options.assure]
-          res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
-          if !res.nil?
-  	  res = JSON.parse(res)
-           # if res["effectiveSlaDomain"]["name"] == @options.assure
-           #   puts "#{@options.assure}"
-           # end
-          else
-            puts "Rubrik SLA Domain does NOT exist, cannot comply"
+    eSLA = findVmItem(Options.vm, 'effectiveSlaDomainId')
+    if eSLA
+      effectiveSla = sla_hash[eSLA]
+      if Options.assure && (effectiveSla != Options.assure) then
+        require 'setSla.rb'
+        if Options.assure == effectiveSla
+          puts "Looks like its set"
+        else
+          if sla_hash.invert[Options.assure]
+            res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
+            if !res.nil?
+    	         res = JSON.parse(res)
+            else
+              puts "Rubrik SLA Domain does NOT exist, cannot comply"
+            end
           end
         end
       end
+    else
+      puts "VM Not Found"
     end
   end
 end

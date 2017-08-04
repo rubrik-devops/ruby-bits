@@ -11,7 +11,6 @@ class ParseOptions
 
   opt_parser = OptionParser.new do |opts|
     opts.banner = "Usage: rubrik.rb [options]"
-
     opts.separator ""
     opts.separator "Common options:"
     opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
@@ -22,6 +21,10 @@ class ParseOptions
     end
     opts.on('-p', '--password [password]', "Rubrik Cluster Password") do |pass|
       options[:p] = pass;
+    end
+    opts.on("-h", "--help", "Show this message") do
+      puts opts
+      exit
     end
 
     opts.separator ""
@@ -91,12 +94,6 @@ class ParseOptions
     opts.separator "Experimental options:"
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
-    end
-
-
-    opts.on_tail("-h", "--help", "Show this message") do
-    puts opts
-    exit
     end
   end
   opt_parser.parse!(args)
