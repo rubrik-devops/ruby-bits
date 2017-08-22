@@ -109,7 +109,12 @@ if Options.sla then
   require 'getVm.rb'
   sla_hash = getSlaHash()
   if Options.list
-    puts sla_hash
+    o = []
+    sla_hash.each do |k,v|
+      o.push(v)
+      o.sort
+    end
+    puts o.join(",") 
     exit
   end
   if Options.livemount
