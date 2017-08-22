@@ -114,7 +114,7 @@ if Options.sla then
       o.push(v)
       o.sort
     end
-    puts o.join(",") 
+    puts o.join(", ") 
     exit
   end
   if Options.livemount
