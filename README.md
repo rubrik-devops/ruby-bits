@@ -32,7 +32,7 @@ Generic ruby bits to be organized and used in chef/puppet environments, and as a
                 --dr                         Instant Recovery of --client
                 --relics [days]              Remove Relic VMs after [n] days of inactivity
                 --sla                        Perform and SLA Operation (used with --get or --assure or --livemount
-                    --list                       Audit SLA configuration
+                    --audit                       Audit SLA configuration
                     -g, --get                    Get Current SLA for [client]
                     -a, --assure [string]        Set SLA for [client])
                     --livemount [SLA]            Perform Live Mount of all VMs in [SLA] Domain
