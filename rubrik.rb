@@ -108,6 +108,10 @@ if Options.sla then
   require 'setToApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
+  if Options.list
+    puts sla_hash
+    exit
+  end
   if Options.livemount
     if Options.unmount
       h=getFromApi("/api/v1/vmware/vm/snapshot/mount")['data']
@@ -138,7 +142,7 @@ if Options.sla then
       end
       exit
     end
-    if Options.list then
+    if Options.audit then
       listData = getFromApi("/api/v1/vmware/vm?limit=9999")
       listData['data'].each do |s|
         lookupSla = s['effectiveSlaDomainId']

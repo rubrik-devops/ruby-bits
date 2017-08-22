@@ -41,7 +41,10 @@ class ParseOptions
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
       options[:sla] = g;
     end
-    opts.on('--list', "Audit SLA configuration") do |g|
+    opts.on('--audit', "Audit SLA configuration") do |g|
+      options[:audit] = g;
+    end
+    opts.on('--list', "Return list of SLA Domains") do |g|
       options[:list] = g;
     end
     opts.on('-g', '--get',"Get Current SLA for [client]") do |g|
