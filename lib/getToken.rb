@@ -8,7 +8,8 @@ require 'base64'
 
 def get_token()
  if Options.n then
-    sv=Options.n
+    sv = []
+    sv << Options.n
     un=Options.u
     pw=Options.p
   else

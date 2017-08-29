@@ -38,6 +38,9 @@ class ParseOptions
     opts.on('--relics [days]',"Remove Relic VMs after [n] days of inactivity") do |g|
       options[:relics] = g;
     end
+    opts.on('--ondemand',"Start On Demand Backup of VM") do |g|
+      options[:odb] = g;
+    end
     opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
       options[:sla] = g;
     end

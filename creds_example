@@ -1,6 +1,6 @@
 {
 	"rubrik": {
-        	"server": "FQDN",
+        	"servers": ["FQDN","FQDN"],
         	"username": "",
         	"password": ""
 	},

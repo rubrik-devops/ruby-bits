@@ -81,6 +81,32 @@ if Options.dr then
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
+if Options.odb
+  require 'getVm.rb'
+  require 'uri'
+  require 'json'
+  require 'getFromApi.rb'
+  require 'setToApi.rb'
+  require 'getSlaHash.rb'
+  sla_hash = getSlaHash()
+  id=findVmItem(Options.vm,'id')
+  effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
+  snapshot_job = JSON.parse(setToApi('/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
+  snapshot_status = ''
+  last_snapshot_status = ''
+  while snapshot_status != "SUCCEEDED" && snapshot_status != "FAILED"
+    snapshot_status = getFromApi('/api/v1/vmware/vm/request/' + snapshot_job)['status']
+    if snapshot_status != last_snapshot_status
+      puts 'Status Changed to ' + snapshot_status
+      sleep 5
+    end
+    last_snapshot_status = snapshot_status
+  end
+  puts 'Final Status is ' + snapshot_status
+end
+
+
+
 if Options.relics
   require 'getFromApi.rb'
   require 'getVm.rb'
