@@ -1,4 +1,4 @@
-ruby-bits
+#ruby-bits
 ===============
 
 Generic ruby bits to be organized and used in chef/puppet environments, and as a stand alone utility
