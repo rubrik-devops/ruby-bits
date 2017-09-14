@@ -1,19 +1,46 @@
 $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
-require 'parseoptions.rb'
+require 'parseOptions.rb'
 require 'pp'
 require 'getCreds.rb'
+require 'getFromApi.rb'
 require 'json'
+require 'csv'
 
-Options = ParseOptions.parse(ARGV)
-Creds = getCreds();
-
-def logme(machine,topic,detail)
-  time=Time.now
-  return if topic == "Ping"
-  File.open('out.log', 'a') { |f| f.write("#{time} : " + machine + " : " + topic + " : " + detail + "\n") }
-  puts("#{time} : " + machine + " : " + topic + " : " + detail)
+class Hash
+   def Hash.nest
+     Hash.new{|h,k| h[k]=Hash.new(&h.default_proc) }
+   end
 end
 
+def writecsv(row)
+  if csv_exists?
+    CSV.open(Options.outfile, 'a+') { |csv| csv << row }
+  else
+    CSV.open(Options.outfile, 'wb') do |csv|
+      csv << HDR
+      csv << row
+    end
+  end
+end
+
+def csv_exists?
+  @exists ||= File.file?(Options.outfile)
+end
+
+Creds = getCreds();
+Begintime=Time.now
+Logtime=Begintime.to_i
+
+# Global options
+Options = ParseOptions.parse(ARGV)
+def logme(machine,topic,detail)
+  time=Time.now
+  timepx=time.to_i
+  return if topic == "Ping"
+  File.open(Logtime.to_s + ".txt", 'a') { |f| f.write("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail + "\n") }
+  puts("#{time}|#{timepx}|" + machine + "|" + topic + "|" + detail)
+end
+# Grab the SLAHash to make pretty names
 if Options.file then
   if Options.assure then
     require 'getVm.rb'
@@ -28,25 +55,24 @@ if Options.file then
 end
 
 if Options.metric then
-  require 'getFromApi.rb'
-  require 'json'
+
   if Options.storage then
     h=getFromApi("/api/internal/stats/system_storage")
   end
   if Options.iostat then
-    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{options.iostat}")
+    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{Options.iostat}")
   end
   if Options.archivebw then
-    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{options.archivebw}")
+    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}")
   end
   if Options.snapshotingest then
-    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{options.snapshotingest}")
+    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}")
   end
   if Options.localingest then
-    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{options.localingest}")
+    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}")
   end
   if Options.physicalingest then
-    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{options.physicalingest}")
+    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}")
   end
   if Options.runway then
     h=getFromApi("/api/internal/stats/runway_remaining")
@@ -54,10 +80,34 @@ if Options.metric then
   if Options.incomingsnaps then
     h=getFromApi("/api/internal/stats/streams/count")
   end
-  if Options.json then
-    puts h.to_json
+  if Options.blah then
+    puts JSON.pretty_generate(h)
+  elsif Options.csv then
+    json = JSON.parse(h.to_json)
+    puts json.first.collect {|k,v| k}.join(',')
+    puts json.collect {|node| "#{node.collect{|k,v| v}.join(',')}\n"}.join
   else
     puts h
+  end
+end
+
+if Options.report then
+  h=getFromApi("/api/internal/report?search_text=#{Options.report}")
+  h['data'].each do |r|
+    if r['name'] == Options.report then
+      o=getFromApi("/api/internal/report/#{r['id']}/table")
+      HDR = o['columns']
+      if !Options.outfile then 
+        puts HDR.to_csv
+      end
+      o['dataGrid'].each do |e|
+        if Options.outfile then
+          writecsv(e)
+        else
+          puts e.to_csv
+        end
+      end
+    end
   end
 end
 
@@ -72,145 +122,126 @@ if Options.dr then
     require 'uri'
     require 'json'
     require 'setToApi.rb'
+    #Get Cluster ID
     clusterInfo=getFromApi("/api/v1/cluster/me")
     id=findVmItem(Options.vm,'id')
+    #Get Latest Snapshot
     h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
     latestSnapshot =  h['data'][0]['id']
+    #Get vmWare Hosts for the Cluster
     hostList = Array.new
-    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
-if Options.odb
-  require 'getVm.rb'
-  require 'uri'
-  require 'json'
-  require 'getFromApi.rb'
-  require 'setToApi.rb'
-  require 'getSlaHash.rb'
-  sla_hash = getSlaHash()
-  id=findVmItem(Options.vm,'id')
-  effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
-  snapshot_job = JSON.parse(setToApi('/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
-  snapshot_status = ''
-  last_snapshot_status = ''
-  while snapshot_status != "SUCCEEDED" && snapshot_status != "FAILED"
-    snapshot_status = getFromApi('/api/v1/vmware/vm/request/' + snapshot_job)['status']
-    if snapshot_status != last_snapshot_status
-      puts 'Status Changed to ' + snapshot_status
-      sleep 5
+if Options.drcsv then
+    require 'CSV'
+    require 'getSlaHash.rb'
+    require 'getFromApi.rb'
+    require 'getVm.rb'
+    require 'uri'
+    require 'json'
+    require 'setToApi.rb'
+    require 'vmOperations.rb'
+    require 'migrateVM.rb'
+    logme("BEGIN","BEGIN",Begintime.to_s)
+    logme("Core","Assembling Base Hashes","Started")
+  #  (@token,@rubrikhost) = get_token()
+    datastores=getFromApi("/api/internal/vmware/datastore")['data']
+    logme("Core","Assembling Base Hashes","Infrastructure")
+    VmwareDatastores = {}
+    datastores.each do |datastore|
+      VmwareDatastores[datastore['name']] = datastore['id']
     end
-    last_snapshot_status = snapshot_status
-  end
-  puts 'Final Status is ' + snapshot_status
-end
-
-
-
-if Options.relics
-  require 'getFromApi.rb'
-  require 'getVm.rb'
-  require 'setToApi.rb'
-  listData = getFromApi("/api/v1/vmware/vm?limit=9999&primary_cluster_id=local")["data"]
-  listData.each do |vm|
-    if vm['isRelic']
-      a = []
-      vmData = getFromApi("/api/v1/vmware/vm/#{vm['id']}")['snapshots']
-      vmData.each do |ss|
-        age = ((Date.parse Time.now.to_s) - (Date.parse ss['date'])).to_i
-        a.push(age)
-      end
-      if a.min && a.min >= Options.relics.to_i
-        puts "#{vm['name']} (#{vm['id']} is Relic : Newest Snapshot #{a.min} Days ago, DELETING ALL SNAPS"
-        setToApi("/api/v1/vmware/vm/#{vm['id']}/snapshot",'','delete')
-      end
+    vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
+    VmwareVCenters = {}
+    vcenters.each do |vcenter|
+      VmwareVCenters[vcenter['id']] = vcenter['hostname']
     end
-  end
+    vdatacenters=getFromApi("/api/internal/vmware/data_center")['data']
+    VmwareDatacenters = {}
+    vdatacenters.each do |datacenter|
+      VmwareVCenters[datacenter['id']] = datacenter['name']
+    end
+    clusters=getFromApi("/api/internal/vmware/compute_cluster")['data']
+    VmwareClusters = {}
+    clusters.each do |cluster|
+      VmwareClusters[cluster['id']] = cluster['name']
+    end
+    hosts=getFromApi("/api/v1/vmware/host")['data']
+    temphosts = Hash.nest
+    hosts.each do |host|
+      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      temphosts[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']]#[VmwareClusters[hd['computeClusterId']]]
+    end
+    Infrastructure = temphosts
+    hosts.each do |host|
+      VmwareHosts[host['id']] = host['name']
+      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      if Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].empty?
+        Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]] = []
+      end
+      Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].push(host['id'])
+    end
+    logme("Core","Assembling Base Hashes","SLA Domains")
+    Sla_hash = getSlaHash()
+    logme("Core","Assembling Base Hashes","Succeeded")
+    # Read from csv file
+    vmlist = CSV.read(Options.infile, {:headers => true})
+    pool    = MigrateVM.pool(size: Options.threads.to_i)
+    vmlist.map do |row|
+      pool.future(:migrate_vm,row)
+    end.map(&:value)
+  endTimer = Time.now
+  runtime = endTimer - Begintime
+  logme("END","END",endTimer.to_s + "|" + runtime.to_s)
 end
 
 if Options.sla then
   require 'getSlaHash.rb'
   require 'getFromApi.rb'
-  require 'setToApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
-  if Options.list
-    o = []
-    sla_hash.each do |k,v|
-      o.push(v)
-      o.sort
+  if Options.get then
+    effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
+    # Get the SLA Domain for node
+    puts "#{effectiveSla}"
+  end
+  if Options.list then
+    listData = getFromApi("/api/v1/vmware/vm?limit=9999")
+    listData['data'].each do |s|
+      lookupSla = s['effectiveSlaDomainId']
+      if lookupSla == 'UNPROTECTED' then
+        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
+      else
+        slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
+        if s['primaryClusterId'] == slData['primaryClusterId'] then
+          result = "Proper SLA Assignment"
+        else
+          result = "Check SLA Assignemnt!"
+        end
+        puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] + ", " + slData['primaryClusterId'] + ", " + result
+      end
     end
-    puts o.join(", ") 
     exit
   end
-  if Options.livemount
-    if Options.unmount
-      h=getFromApi("/api/v1/vmware/vm/snapshot/mount")['data']
-      h.each do |m|
-        if getFromApi("/api/v1/vmware/vm/" + m['vmId'])['effectiveSlaDomain']['name'] == Options.livemount
-          puts "Unmounting '" + getFromApi("/api/v1/vmware/vm/" + m['mountedVmId'])['name'] + "'"
-          setToApi('/api/v1/vmware/vm/snapshot/mount/' + m['id'],'',"delete")
-        end
-      end
+  effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
+  if Options.assure && (effectiveSla != Options.assure) then
+    require 'setSla.rb'
+    if Options.assure == effectiveSla
+      puts "Looks like its set"
     else
-      listData = getFromApi("/api/v1/vmware/vm?limit=9999")
-      listData['data'].each do |s|
-        if s['effectiveSlaDomainName'] == Options.livemount
-          h=getFromApi("/api/v1/vmware/vm/#{s['id']}/snapshot")['data'][0]
-          puts "Mounting #{s['name']}  #{h['id']}  #{h['date']}"
-          setToApi('/api/v1/vmware/vm/snapshot/' + h['id'] + '/mount',{ "hostId" => "#{s['hostId']}", "powerOn" => true},"post")
-          #sleep 5
-        end
-      end
-    end
-  else
-    if Options.get then
-      eSLA = findVmItem(Options.vm, 'effectiveSlaDomainId')
-      if eSLA
-        puts "#{sla_hash[eSLA]}"
-      else
-        puts "VM Not Found"
-      end
-      exit
-    end
-    if Options.audit then
-      listData = getFromApi("/api/v1/vmware/vm?limit=9999")
-      listData['data'].each do |s|
-        lookupSla = s['effectiveSlaDomainId']
-        if lookupSla == 'UNPROTECTED' then
-          puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
+      if sla_hash.invert[Options.assure]
+        res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
+        if !res.nil?
+	         res = JSON.parse(res)
+         # if res["effectiveSlaDomain"]["name"] == @Options.assure
+         #   puts "#{@Options.assure}"
+         # end
         else
-          slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
-          if s['primaryClusterId'] == slData['primaryClusterId'] then
-            result = "Proper SLA Assignment"
-          else
-            result = "Check SLA Assignemnt!"
-          end
-          puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId'] + ", " + slData['primaryClusterId'] + ", " + result
+          puts "Rubrik SLA Domain does NOT exist, cannot comply"
         end
       end
-      exit
-    end
-    eSLA = findVmItem(Options.vm, 'effectiveSlaDomainId')
-    if eSLA
-      effectiveSla = sla_hash[eSLA]
-      if Options.assure && (effectiveSla != Options.assure) then
-        require 'setSla.rb'
-        if Options.assure == effectiveSla
-          puts "Looks like its set"
-        else
-          if sla_hash.invert[Options.assure]
-            res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
-            if !res.nil?
-    	         res = JSON.parse(res)
-            else
-              puts "Rubrik SLA Domain does NOT exist, cannot comply"
-            end
-          end
-        end
-      end
-    else
-      puts "VM Not Found"
     end
   end
 end
