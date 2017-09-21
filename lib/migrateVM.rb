@@ -17,7 +17,7 @@ class MigrateVM
       vcenter_ids[v['name']] = v['id']
     end
 
-    refresh_vcenter = JSON.parse(setToApi('/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['fromVCenter']] + '/refresh','',"post"))['id']
+    refresh_vcenter = JSON.parse(setToApi('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['fromVCenter']] + '/refresh','',"post"))['id']
     refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
     last_refresh_status = refresh_status
     while refresh_status != "SUCCEEDED"
@@ -46,7 +46,7 @@ class MigrateVM
     id=findVmItemByName(vmobj['VMName'],'id')
     effectiveSla = Sla_hash[findVmItemByName(vmobj['VMName'], 'effectiveSlaDomainId')]
     logme("#{vmobj['VMName']}","Request Snapshot",id)
-    snapshot_job = JSON.parse(setToApi('/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
+    snapshot_job = JSON.parse(setToApi('rubrik','/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
     logme("#{vmobj['VMName']}","Monitor Snapshot Request",snapshot_job)
     snapshot_status = ''
     last_snapshot_status = ''
@@ -83,7 +83,7 @@ class MigrateVM
 
 # Instant Recover the VM
     logme("#{vmobj['VMName']}","Request Instant Recovery",id)
-    recovery_job = JSON.parse(setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}"},"post"))['id']
+    recovery_job = JSON.parse(setToApi('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}"},"post"))['id']
     logme("#{vmobj['VMName']}","Instant Recovery Request",recovery_job)
     recovery_status = ''
     last_recovery_status = ''
@@ -120,11 +120,11 @@ class MigrateVM
 #      end
 #      begin
 #        logme("#{vmobj['VMName']}","Remove Live Mount","Started")
-#        setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
+#        setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
 #      rescue StandardError=>e
 #        puts e
 #      end
-#      #remove_job = JSON.parse(setToApi("/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
+#      #remove_job = JSON.parse(setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
 #    #  logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
 #    #  remove_status = ''
 #    #  last_remove_status = ''
@@ -138,7 +138,7 @@ class MigrateVM
 #    end
 
 # Refresh the vcenter
-    refresh_vcenter = JSON.parse(setToApi('/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
+    refresh_vcenter = JSON.parse(setToApi('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
     refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
     last_refresh_status = refresh_status
     while refresh_status != "SUCCEEDED"

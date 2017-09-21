@@ -2,14 +2,14 @@ require 'net/https'
 require 'pp'
 require 'uri'
 
-def setToApi(endpoint,l,type)
+def setToApi(server,endpoint,l,type)
   endpoint = URI.encode(endpoint)
   if Options.auth == 'token'
-    (t,sv) = get_token
+    (t,sv) = get_token(server)
     conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
     conn.authorization :Bearer, t
   else
-    (u,pw,sv) = get_token
+    (u,pw,sv) = get_token(server)
     conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
     conn.basic_auth u, pw
     conn.headers['Authorization']

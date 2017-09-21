@@ -25,6 +25,7 @@ Specific options:
     -c, --client [name]              Name of Virtual Machine to perform operation for
     -g, --get                        Perform GET operation
     -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
+
         --sizerange low,high         Assure SLA based on VM VMDK sizes in Gigabyte (low,high)
         --os string,string           Assure SLA based on OS type
         --dr                         Instant Recovery of --client
@@ -37,7 +38,9 @@ Specific options:
         --list                       Audit SLA configuration (used with --sla)
 
 Report options:
-    -r, --report [string]            Return Requested Report Data
+    -r, --envision [string]          Return Requested Envision Report Table Data
+        --tag [string]               Reference vmware tag (key by moref) - NOT WORKING YET
+        --vmusage                    Return CSV of per-vm usage
     -o, --outfile [string]           Specify Filename to Write out (STDOUT if not set)
 
 Metric options:

@@ -2,6 +2,7 @@
 require 'getFromApi.rb'
 
 # Grab Requested [item] from hash and return ony that value
+
 def findVmItemByName(t, item)
   t = t.upcase
   begin
@@ -11,7 +12,7 @@ def findVmItemByName(t, item)
         return v[item]
       end
     end
-    return false 
+    return false
   rescue StandardError => e
     return false
   end
