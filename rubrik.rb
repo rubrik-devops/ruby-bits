@@ -5,6 +5,7 @@ require 'getCreds.rb'
 require 'getFromApi.rb'
 require 'json'
 require 'csv'
+require 'getVm.rb'
 
 class Hash
    def Hash.nest
@@ -12,12 +13,12 @@ class Hash
    end
 end
 
-def writecsv(row)
+def writecsv(row,hdr)
   if csv_exists?
     CSV.open(Options.outfile, 'a+') { |csv| csv << row }
   else
     CSV.open(Options.outfile, 'wb') do |csv|
-      csv << HDR
+      csv << hdr
       csv << row
     end
   end
@@ -25,6 +26,10 @@ end
 
 def csv_exists?
   @exists ||= File.file?(Options.outfile)
+end
+
+def to_g (b)     
+  (((b.to_i/1024/1024/1024) * 100) / 100).round 
 end
 
 Creds = getCreds();
@@ -47,7 +52,7 @@ if Options.file then
     require 'uri'
     ss = URI.encode(Options.assure.to_s)
     managedId=findVmItem(Options.vm,'managedId')
-    h=getFromApi("/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
+    h=getFromApi('rubrik',"/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
     h['data'].each do |s|
       puts s['path']
     end
@@ -57,28 +62,28 @@ end
 if Options.metric then
 
   if Options.storage then
-    h=getFromApi("/api/internal/stats/system_storage")
+    h=getFromApi('rubrik',"/api/internal/stats/system_storage")
   end
   if Options.iostat then
-    h=getFromApi("/api/internal/cluster/me/io_stats?range=-#{Options.iostat}")
+    h=getFromApi('rubrik',"/api/internal/cluster/me/io_stats?range=-#{Options.iostat}")
   end
   if Options.archivebw then
-    h=getFromApi("/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}")
+    h=getFromApi('rubrik',"/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}")
   end
   if Options.snapshotingest then
-    h=getFromApi("/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}")
+    h=getFromApi('rubrik',"/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}")
   end
   if Options.localingest then
-    h=getFromApi("/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}")
+    h=getFromApi('rubrik',"/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}")
   end
   if Options.physicalingest then
-    h=getFromApi("/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}")
+    h=getFromApi('rubrik',"/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}")
   end
   if Options.runway then
-    h=getFromApi("/api/internal/stats/runway_remaining")
+    h=getFromApi('rubrik',"/api/internal/stats/runway_remaining")
   end
   if Options.incomingsnaps then
-    h=getFromApi("/api/internal/stats/streams/count")
+    h=getFromApi('rubrik',"/api/internal/stats/streams/count")
   end
   if Options.blah then
     puts JSON.pretty_generate(h)
@@ -91,18 +96,70 @@ if Options.metric then
   end
 end
 
-if Options.report then
-  h=getFromApi("/api/internal/report?search_text=#{Options.report}")
+if Options.vmusage then
+  vcenters=getFromApi('rubrik',"/api/v1/vmware/vcenter")['data']
+  VmwareVCenters = {}     
+  vcenters.each do |vcenter|       
+    VmwareVCenters[vcenter['id']] = vcenter['hostname']     
+  end
+  vdatacenters=getFromApi('rubrik',"/api/internal/vmware/data_center")['data']     
+  VmwareDatacenters = {}     
+  vdatacenters.each do |datacenter|       
+    VmwareVCenters[datacenter['id']] = datacenter['name']     
+  end
+  s=getFromApi('rubrik',"/api/internal/stats/per_vm_storage")['data'] 
+  s.each do |r|
+    if r['id'].include? "-vm-" then
+      vmr=getFromApi('rubrik',"/api/v1/vmware/vm/VirtualMachine:::#{r['id']}")
+      r['vmname']=vmr['name']
+      r['vcenter']=VmwareVCenters[vmr['vcenterId']]
+      r['datacenter']=VmwareVCenters[vmr['currentHost']['datacenterId']]
+      if Options.tag then
+        require 'vmOperations.rb'
+        #vmstuff = getVm(Creds[r['vcenter']],{"objectName" => r['vmname'],"datacenter" => r['datacenter']})
+        #vmstuff.config.extraConfig.each { |x| puts "#{x.key}: #{x.value}" }
+      	crap=vmwareFromApi(r['vcenter'],"/rest/com/vmware/cis/tagging/tag/")
+        #puts vmstuff.tag
+  #      vmstuff.config.each { |x| puts "#{x.key}: #{x.value}" }
+        #pp vmstuff.config 
+        exit
+      end
+      r.keys.each do |c|
+        if c.include? "Bytes" then
+          r[c] = to_g(r[c])
+        end
+      end 
+      next if !r['vmname']
+      if !Options.outfile & !defined? Done then
+        puts r.keys.to_csv
+        Done = 1
+      end
+      if Options.outfile then
+        writecsv(r.values,r.keys)
+      else
+        puts r.values.to_csv
+      end
+    end
+  end
+end 
+
+
+if Options.envision then
+  h=getFromApi('rubrik',"/api/internal/report?search_text=#{Options.envision}")
   h['data'].each do |r|
-    if r['name'] == Options.report then
-      o=getFromApi("/api/internal/report/#{r['id']}/table")
-      HDR = o['columns']
+    if r['name'] == Options.envision then
+      o=getFromApi('rubrik',"/api/internal/report/#{r['id']}/table")
+      hdr = o['columns']
       if !Options.outfile then 
-        puts HDR.to_csv
+        puts hdr.to_csv
       end
       o['dataGrid'].each do |e|
+        if Options.tag then
+          vmr=getFromApi('rubrik',"/api/v1/vmware/vm/#{x['ObjectId']}")
+          puts vmr['moid']
+        end
         if Options.outfile then
-          writecsv(e)
+          writecsv(e,hdr)
         else
           puts e.to_csv
         end
@@ -123,10 +180,10 @@ if Options.dr then
     require 'json'
     require 'setToApi.rb'
     #Get Cluster ID
-    clusterInfo=getFromApi("/api/v1/cluster/me")
+    clusterInfo=getFromApi('rubrik',"/api/v1/cluster/me")
     id=findVmItem(Options.vm,'id')
     #Get Latest Snapshot
-    h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
+    h=getFromApi('rubrik',"/api/v1/vmware/vm/#{id}/snapshot")
     latestSnapshot =  h['data'][0]['id']
     #Get vmWare Hosts for the Cluster
     hostList = Array.new
@@ -147,37 +204,37 @@ if Options.drcsv then
     logme("BEGIN","BEGIN",Begintime.to_s)
     logme("Core","Assembling Base Hashes","Started")
   #  (@token,@rubrikhost) = get_token()
-    datastores=getFromApi("/api/internal/vmware/datastore")['data']
+    datastores=getFromApi('rubrik',"/api/internal/vmware/datastore")['data']
     logme("Core","Assembling Base Hashes","Infrastructure")
     VmwareDatastores = {}
     datastores.each do |datastore|
       VmwareDatastores[datastore['name']] = datastore['id']
     end
-    vcenters=getFromApi("/api/v1/vmware/vcenter")['data']
+    vcenters=getFromApi('rubrik',"/api/v1/vmware/vcenter")['data']
     VmwareVCenters = {}
     vcenters.each do |vcenter|
       VmwareVCenters[vcenter['id']] = vcenter['hostname']
     end
-    vdatacenters=getFromApi("/api/internal/vmware/data_center")['data']
+    vdatacenters=getFromApi('rubrik',"/api/internal/vmware/data_center")['data']
     VmwareDatacenters = {}
     vdatacenters.each do |datacenter|
       VmwareVCenters[datacenter['id']] = datacenter['name']
     end
-    clusters=getFromApi("/api/internal/vmware/compute_cluster")['data']
+    clusters=getFromApi('rubrik',"/api/internal/vmware/compute_cluster")['data']
     VmwareClusters = {}
     clusters.each do |cluster|
       VmwareClusters[cluster['id']] = cluster['name']
     end
-    hosts=getFromApi("/api/v1/vmware/host")['data']
+    hosts=getFromApi('rubrik',"/api/v1/vmware/host")['data']
     temphosts = Hash.nest
     hosts.each do |host|
-      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      hd=getFromApi('rubrik',"/api/v1/vmware/host/#{host['id']}")
       temphosts[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']]#[VmwareClusters[hd['computeClusterId']]]
     end
     Infrastructure = temphosts
     hosts.each do |host|
       VmwareHosts[host['id']] = host['name']
-      hd=getFromApi("/api/v1/vmware/host/#{host['id']}")
+      hd=getFromApi('rubrik',"/api/v1/vmware/host/#{host['id']}")
       if Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].empty?
         Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]] = []
       end
@@ -208,13 +265,13 @@ if Options.sla then
     puts "#{effectiveSla}"
   end
   if Options.list then
-    listData = getFromApi("/api/v1/vmware/vm?limit=9999")
+    listData = getFromApi('rubrik',"/api/v1/vmware/vm?limit=9999")
     listData['data'].each do |s|
       lookupSla = s['effectiveSlaDomainId']
       if lookupSla == 'UNPROTECTED' then
         puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
       else
-        slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
+        slData = getFromApi('rubrik',"/api/v1/sla_domain/#{lookupSla}")
         if s['primaryClusterId'] == slData['primaryClusterId'] then
           result = "Proper SLA Assignment"
         else
