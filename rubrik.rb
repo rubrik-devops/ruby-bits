@@ -322,7 +322,7 @@ if Options.sla then
   if Options.os || Options.sr
     # See if tools is installed on the VM and add to array
     puts "Qualifying SLA Membership"
-    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=20&primary_cluster_id=local")['data']
+    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']
     puts "Checking Tools on #{vms.count} VMs"
     vms.each do |vm|
       if vm['toolsInstalled']
@@ -368,7 +368,6 @@ if Options.sla then
   end
   
   vmids.each do |id|
-    puts "#{id}"
     if $v
       print "."
     end
