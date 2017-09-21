@@ -25,21 +25,21 @@ Specific options:
     -c, --client [name]              Name of Virtual Machine to perform operation for
     -g, --get                        Perform GET operation
     -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
-
         --sizerange low,high         Assure SLA based on VM VMDK sizes in Gigabyte (low,high)
         --os string,string           Assure SLA based on OS type
+        --odb                        On demand backup of --client or --infile
         --dr                         Instant Recovery of --client
         --drcsv                      Instant Recovery of a csv of clients
     -s                               Startup VM before vMotion (Defaults to After)
         --short                      Only perform the source side tasks and ODB
-    -i, --infile [string]            Path to CSV file to run drcsv against
+    -i, --infile [string]            Path to CSV file to run drcsv/odb against
     -t, --threads [string]           Number of simultaneous migrations
         --sla                        Perform and SLA Operation (used with --get or --assure
         --list                       Audit SLA configuration (used with --sla)
 
 Report options:
     -r, --envision [string]          Return Requested Envision Report Table Data
-        --tag [string]               Reference vmware tag (key by moref) - NOT WORKING YET
+        --tag [string]               Reference vmware tag (key by moref)
         --vmusage                    Return CSV of per-vm usage
     -o, --outfile [string]           Specify Filename to Write out (STDOUT if not set)
 
@@ -64,6 +64,8 @@ Common options:
     -u, --username [username]        Rubrik Cluster Username
     -p, --password [password]        Rubrik Cluster Password
     -h, --help                       Show this message
+
+
 ```
 
 # Examples:
@@ -77,6 +79,20 @@ Mounting win018  19e38c78-e10d-4c06-a009-3de2da2cb41f  2017-08-01T13:04:35Z
 ```
 Command - ruby .\rubrik.rb --sla --livemount Silver --unmount -u admin -p password -n my.rubrik.cluster
 Unmounting 'win018 08-01 13:04 2'
+```
+## Run On Demand Backups for a client, or a .csv. Allows you to set SLA Domain  (column with the header of 'name' will be used)
+```
+Command - ruby .\rubrik.rb --odb --infile .\infile.csv
+Requesting backup of devops-dc01, not setting SLA domain - QUEUED
+Requesting backup of devops-dc02, not setting SLA domain - QUEUED
+
+Command - ruby .\rubrik.rb --odb --infile .\infile.csv --assure Gold
+Requesting backup of devops-dc01, setting to Gold SLA Domain - QUEUED
+Requesting backup of devops-dc02, setting to Gold SLA Domain - QUEUED
+
+Command - ruby .\rubrik.rb --odb -c devops-bot --assure Gold
+Requesting backup of devops-bot, setting to Gold SLA Domain - QUEUED
+
 ```
 ## Set SLA Domain based on OS, VMDK total size, or both
 ```
