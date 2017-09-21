@@ -314,15 +314,15 @@ if Options.sla then
     exit
   end
   vmids = []
-  vmids_to_del = []
-  vmids_to_del_vmdk = []
+  vtd = []
+  vtdv = []
   if Options.vm 
     vmids << findVmItemByName(Options.vm, 'id')
   end
-  if Options.os || Options.sizerange
+  if Options.os || Options.sr
     # See if tools is installed on the VM and add to array
     puts "Qualifying SLA Membership"
-    vms = getFromApi('rubrik',"/api/v1/vmware/vm?isRelic=false&limit=20&primaryclusterid=local")['data']
+    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=20&primary_cluster_id=local")['data']
     puts "Checking Tools on #{vms.count} VMs"
     vms.each do |vm|
       if vm['toolsInstalled']
@@ -344,30 +344,31 @@ if Options.sla then
         end
         # Delete from array if there is no OS match
         if !match 
-          vmids_to_del << i
+          vtd << i
         end
       end
-      puts " - #{vmids_to_del.count} have failed the OS check for #{Options.os}"
-      vmids = vmids.reject{ |e| vmids_to_del.include? e }
+      puts " - #{vtd.count} fail the OS check for #{Options.os}"
+      vmids = vmids.reject{ |e| vtd.include? e }
     end
-    if Options.sizerange 
+    if Options.sr 
       puts "Checking VMDK size on #{vmids.count} VMs"
       vmids.each do |i|
         vmdks = bToG(getVmdkSize(i)).round
-        if vmdks.between?(Options.sizerange[0].to_i,Options.sizerange[1].to_i)
+        if vmdks.between?(Options.sr[0].to_i,Options.sr[1].to_i)
           next
         else  
-          vmids_to_del_vmdk << i
+          vtdv << i
         end
       end
-      puts " - #{vmids_to_del_vmdk.count} have failed the VMDK check for #{Options.sizerange} gb total size"
-      vmids = vmids.reject{ |e| vmids_to_del_vmdk.include? e }
+      puts " - #{vtdv.count} fail the VMDK check for #{Options.sr} gb total size"
+      vmids = vmids.reject{ |e| vtdv.include? e }
     end
     puts "Setting #{vmids.count} to #{Options.assure}"
     $v = true
   end
   
   vmids.each do |id|
+    puts "#{id}"
     if $v
       print "."
     end

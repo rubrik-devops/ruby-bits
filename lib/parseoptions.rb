@@ -27,7 +27,7 @@ class ParseOptions
       options[:assure] = g;
     end
     opts.on('--sizerange low,high',Array,"Assure SLA based on VM VMDK sizes in Gigabyte (low,high)") do |g|
-      options[:sizerange] = g;
+      options[:sr] = g;
     end
     opts.on('--os string,string',Array,"Assure SLA based on OS type") do |g|
       options[:os] = g;
