@@ -1,6 +1,7 @@
 require 'net/https'
 require 'pp'
 require 'uri'
+require 'JSON'
 
 def setToApi(server,endpoint,l,type)
   endpoint = URI.encode(endpoint)
@@ -21,6 +22,6 @@ def setToApi(server,endpoint,l,type)
     req.body  = l.to_json
   end
   if response.status !~ /202|200/
-    return response.body
+    return JSON.parse(response.body)
   end
 end

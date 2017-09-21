@@ -32,6 +32,9 @@ class ParseOptions
     opts.on('--os string,string',Array,"Assure SLA based on OS type") do |g|
       options[:os] = g;
     end
+    opts.on('--odb', "On demand backup of --client or --infile") do |g|
+      options[:odb] = g;
+    end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
@@ -44,7 +47,7 @@ class ParseOptions
     opts.on('--short', "Only perform the source side tasks and ODB") do |g|
       options[:short] = g;
     end
-    opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
+    opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv/odb against") do |g|
       options[:infile] = g;
     end
     opts.on('-t', '--threads [string]', "Number of simultaneous migrations") do |t|

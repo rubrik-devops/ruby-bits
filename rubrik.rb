@@ -57,7 +57,7 @@ if Options.file then
     require 'uri'
     ss = URI.encode(Options.assure.to_s)
     managedId=findVmItemByName(Options.vm,'managedId')
-    h=getFromApi("/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
+    h=getFromApi('rubrik',"/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
     h['data'].each do |s|
       puts s['path']
     end
@@ -257,6 +257,31 @@ if Options.drcsv then
   endTimer = Time.now
   runtime = endTimer - Begintime
   logme("END","END",endTimer.to_s + "|" + runtime.to_s)
+end
+
+if Options.odb then
+  require 'setToApi.rb'
+  require 'getSlaHash.rb'
+  sla_hash = getSlaHash()
+  vmids = []
+  if Options.vm then
+    vmids << findVmItemByName(Options.vm, 'id')
+  end  
+  if Options.infile
+    vmlist = CSV.read(Options.infile, {:headers => true})
+    vmlist.each do |vm|
+       vmids << findVmItemByName(vm['name'], 'id')
+    end
+  end
+  vmids.each do |vm|
+    if Options.assure 
+      o = setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post")
+      puts "Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o['status']}"
+    else
+      o = setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post")
+      puts "Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o['status']}"
+    end
+  end
 end
 
 if Options.sla then
