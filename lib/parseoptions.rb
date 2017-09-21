@@ -11,59 +11,53 @@ class ParseOptions
 
   opt_parser = OptionParser.new do |opts|
     opts.banner = "Usage: rubrik.rb [options]"
-    opts.separator ""
-    opts.separator "Common options:"
-    opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
-      options[:n] = node;
-    end
-    opts.on('-u', '--username [username]',"Rubrik Cluster Username") do |user|
-      options[:u] = user;
-    end
-    opts.on('-p', '--password [password]', "Rubrik Cluster Password") do |pass|
-      options[:p] = pass;
-    end
-    opts.on("-h", "--help", "Show this message") do
-      puts opts
-      exit
-    end
 
     opts.separator ""
     opts.separator "Specific options:"
+    opts.on('-l', '--login', "Perform no operations but return authentication token") do |login|
+      options[:login] = login;
+    end
     opts.on('-c', '--client [name]', "Name of Virtual Machine to perform operation for") do |c|
       options[:vm] = c;
+    end
+    opts.on('-g', '--get',"Perform GET operation") do |g|
+      options[:get] = g;
+    end
+    opts.on('-a', '--assure [string]',"String to set in SET operation (in case of --sla, it's the SLA Name)") do |g|
+      options[:assure] = g;
     end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
-    opts.on('--relics [days]',"Remove Relic VMs after [n] days of inactivity") do |g|
-      options[:relics] = g;
+    opts.on('--drcsv', "Instant Recovery of a csv of clients") do |g|
+      options[:drcsv] = g;
     end
-    opts.on('--ondemand',"Start On Demand Backup of VM") do |g|
-      options[:odb] = g;
+    opts.on('-s', "Startup VM before vMotion (Defaults to After)") do |g|
+      options[:startbeforevmotion] = g;
     end
-    opts.on('--sla',"Perform and SLA Operation (used with --get or --assure or --livemount") do |g|
+    opts.on('--short', "Only perform the source side tasks and ODB") do |g|
+      options[:short] = g;
+    end
+    opts.on('-i', '--infile [string]', "Path to CSV file to run drcsv against") do |g|
+      options[:infile] = g;
+    end
+    opts.on('-t', '--threads [string]', "Number of simultaneous migrations") do |t|
+      options[:threads] = t;
+    end
+    opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
       options[:sla] = g;
     end
-    opts.on('--audit', "Audit SLA configuration") do |g|
-      options[:audit] = g;
-    end
-    opts.on('--list', "Return list of SLA Domains") do |g|
+    opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;
     end
-    opts.on('-g', '--get',"Get Current SLA for [client]") do |g|
-      options[:get] = g;
+    opts.separator ""
+    opts.separator "Report options:"
+    opts.on('-r','--report [string]', "Return Requested Report Data") do |g|
+      options[:report] = g;
     end
-    opts.on('-a', '--assure [string]',"Set SLA for [client])") do |g|
-      options[:assure] = g;
+    opts.on('-o','--outfile [string]', "Specify Filename to Write out (STDOUT if not set)") do |g|
+      options[:outfile] = g;
     end
-    opts.on('--livemount [SLA]',"Perform Live Mount of all VMs in [SLA] Domain") do |g|
-      options[:livemount] = g;
-    end
-    opts.on('--unmount',"Umount all currently Live Mounted VMs in [SLA] Domain") do |g|
-      options[:unmount] = g;
-    end
-
-
     opts.separator ""
     opts.separator "Metric options:"
     opts.on('--metric', "Return Requested Metric") do |g|
@@ -96,10 +90,28 @@ class ParseOptions
     opts.on('-j', '--json', "Output in JSON if possible") do |g|
       options[:json] = g;
     end
+    opts.on('-v', '--csv', "Output in CSV if possible") do |g|
+      options[:csv] = g;
+    end
     opts.separator ""
     opts.separator "Experimental options:"
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
+    end
+    opts.separator ""
+    opts.separator "Common options:"
+    opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
+      options[:n] = node;
+    end
+    opts.on('-u', '--username [username]',"Rubrik Cluster Username") do |user|
+      options[:u] = user;
+    end
+    opts.on('-p', '--password [password]', "Rubrik Cluster Password") do |pass|
+      options[:p] = pass;
+    end
+    opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
     end
   end
   opt_parser.parse!(args)
