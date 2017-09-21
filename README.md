@@ -18,40 +18,49 @@ Generic ruby bits to be organized and used in chef/puppet environments, and as a
         	}
         }
 
+Usage: rubrik.rb [options]
 
-        Usage: rubrik.rb [options]
+Specific options:
+    -l, --login                      Perform no operations but return authentication token
+    -c, --client [name]              Name of Virtual Machine to perform operation for
+    -g, --get                        Perform GET operation
+    -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
+        --sizerange low,high         Assure SLA based on VM VMDK sizes in Gigabyte (low,high)
+        --os string,string           Assure SLA based on OS type
+        --dr                         Instant Recovery of --client
+        --drcsv                      Instant Recovery of a csv of clients
+    -s                               Startup VM before vMotion (Defaults to After)
+        --short                      Only perform the source side tasks and ODB
+    -i, --infile [string]            Path to CSV file to run drcsv against
+    -t, --threads [string]           Number of simultaneous migrations
+        --sla                        Perform and SLA Operation (used with --get or --assure
+        --list                       Audit SLA configuration (used with --sla)
 
-        Common options:
-            -n, --node [Address]             Rubrik Cluster Address/FQDN
-            -u, --username [username]        Rubrik Cluster Username
-            -p, --password [password]        Rubrik Cluster Password
-            -h, --help                       Show this message
+Report options:
+    -r, --report [string]            Return Requested Report Data
+    -o, --outfile [string]           Specify Filename to Write out (STDOUT if not set)
 
-        Specific options:
-            -c, --client [name]              Name of Virtual Machine to perform operation for
-                --dr                         Instant Recovery of --client
-                --relics [days]              Remove Relic VMs after [n] days of inactivity
-                --sla                        Perform and SLA Operation (used with --get or --assure or --livemount
-                    --audit                       Audit SLA configuration
-                    -g, --get                    Get Current SLA for [client]
-                    -a, --assure [string]        Set SLA for [client])
-                    --livemount [SLA]            Perform Live Mount of all VMs in [SLA] Domain
-                        --unmount                    Umount all currently Live Mounted VMs in [SLA] Domain
+Metric options:
+        --metric                     Return Requested Metric
+        --storage                    Return storage capacity information
+        --incoming                   Return the number of currently incoming snapshots
+        --runway                     Return the available runway in days
+        --iostat [range]             Return iostat information for range (30sec, 60min, etc)
+        --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
+        --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
+        --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
+        --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
+    -j, --json                       Output in JSON if possible
+    -v, --csv                        Output in CSV if possible
 
-        Metric options:
-                --metric                     Return Requested Metric
-                    --storage                    Return storage capacity information
-                    --incoming                   Return the number of currently incoming snapshots
-                    --runway                     Return the available runway in days
-                    --iostat [range]             Return iostat information for range (30sec, 60min, etc)
-                    --archivebw [range]          Return archive bandwidth information for range (30sec, 60min, etc)
-                    --physicalingest [range]     Return physical ingest bandwidth information for range (30sec, 60min, etc)
-                    --localingest [range]        Return local ingest bandwidth information for range (30sec, 60min, etc)
-                    --snapshotingest [range]     Return snapshot ingest bandwidth information for range (30sec, 60min, etc)
-                        -j, --json                       Output in JSON if possible
+Experimental options:
+        --file                       Experimental - file search and recovery
 
-        Experimental options:
-                --file                       Experimental - file search and recovery
+Common options:
+    -n, --node [Address]             Rubrik Cluster Address/FQDN
+    -u, --username [username]        Rubrik Cluster Username
+    -p, --password [password]        Rubrik Cluster Password
+    -h, --help                       Show this message
 ```
 
 # Examples:
@@ -65,6 +74,18 @@ Mounting win018  19e38c78-e10d-4c06-a009-3de2da2cb41f  2017-08-01T13:04:35Z
 ```
 Command - ruby .\rubrik.rb --sla --livemount Silver --unmount -u admin -p password -n my.rubrik.cluster
 Unmounting 'win018 08-01 13:04 2'
+```
+## Set SLA Domain based on OS, VMDK total size, or both
+```
+Command -  ruby .\rubrik.rb --sizerange 1,100 --os centos --sla --assure Gold
+Qualifying SLA Membership 
+Checking Tools on 20 VMs 
+ - 20 of 20 have VMTools 
+Checking OS on 20 VMs 
+ - 1 have failed the OS check for ["centos", "windows"] 
+Checking VMDK size on 19 VMs 
+ - 0 have failed the VMDK check for ["1", "100"] gb total size 
+Setting 19 to Gold ...................Done
 ```
 ## Delete all snapshots for VMs if Relic for over N days
 ```

@@ -26,6 +26,12 @@ class ParseOptions
     opts.on('-a', '--assure [string]',"String to set in SET operation (in case of --sla, it's the SLA Name)") do |g|
       options[:assure] = g;
     end
+    opts.on('--sizerange low,high',Array,"Assure SLA based on VM VMDK sizes in Gigabyte (low,high)") do |g|
+      options[:sizerange] = g;
+    end
+    opts.on('--os string,string',Array,"Assure SLA based on OS type") do |g|
+      options[:os] = g;
+    end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end

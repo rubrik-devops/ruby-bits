@@ -12,6 +12,10 @@ class Hash
    end
 end
 
+def bToG (b)     
+  (((b.to_f/1024/1024/1024) * 100) / 100) 
+end
+
 def writecsv(row)
   if csv_exists?
     CSV.open(Options.outfile, 'a+') { |csv| csv << row }
@@ -46,7 +50,7 @@ if Options.file then
     require 'getVm.rb'
     require 'uri'
     ss = URI.encode(Options.assure.to_s)
-    managedId=findVmItem(Options.vm,'managedId')
+    managedId=findVmItemByName(Options.vm,'managedId')
     h=getFromApi("/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
     h['data'].each do |s|
       puts s['path']
@@ -124,7 +128,7 @@ if Options.dr then
     require 'setToApi.rb'
     #Get Cluster ID
     clusterInfo=getFromApi("/api/v1/cluster/me")
-    id=findVmItem(Options.vm,'id')
+    id=findVmItemByName(Options.vm,'id')
     #Get Latest Snapshot
     h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
     latestSnapshot =  h['data'][0]['id']
@@ -203,9 +207,10 @@ if Options.sla then
   require 'getVm.rb'
   sla_hash = getSlaHash()
   if Options.get then
-    effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
+    effectiveSla = sla_hash[findVmItemByName(Options.vm, 'effectiveSlaDomainId')]
     # Get the SLA Domain for node
     puts "#{effectiveSla}"
+    exit
   end
   if Options.list then
     listData = getFromApi("/api/v1/vmware/vm?limit=9999")
@@ -214,7 +219,7 @@ if Options.sla then
       if lookupSla == 'UNPROTECTED' then
         puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
       else
-        slData = getFromApi("/api/v1/sla_domain/#{lookupSla}")
+        slData = getFromApi('rubrik',"/api/v1/sla_domain/#{lookupSla}")
         if s['primaryClusterId'] == slData['primaryClusterId'] then
           result = "Proper SLA Assignment"
         else
@@ -225,23 +230,85 @@ if Options.sla then
     end
     exit
   end
-  effectiveSla = sla_hash[findVmItem(Options.vm, 'effectiveSlaDomainId')]
-  if Options.assure && (effectiveSla != Options.assure) then
-    require 'setSla.rb'
-    if Options.assure == effectiveSla
-      puts "Looks like its set"
-    else
-      if sla_hash.invert[Options.assure]
-        res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
-        if !res.nil?
-	         res = JSON.parse(res)
-         # if res["effectiveSlaDomain"]["name"] == @Options.assure
-         #   puts "#{@Options.assure}"
-         # end
-        else
-          puts "Rubrik SLA Domain does NOT exist, cannot comply"
+  vmids = []
+  vmids_to_del = []
+  vmids_to_del_vmdk = []
+  if Options.vm 
+    ids << findVmItemByName(Options.vm, 'id')
+  end
+
+  if Options.os || Options.sizerange
+
+    # See if tools is installed on the VM and add to array
+    puts "Qualifying SLA Membership"
+    vms = getFromApi("/api/v1/vmware/vm?isRelic=false&limit=20&primaryclusterid=local")['data']
+    puts "Checking Tools on #{vms.count} VMs"
+    vms.each do |vm|
+      if vm['toolsInstalled']
+        vmids << vm['id']
+      end
+    end
+
+    puts " - #{vmids.count} of #{vms.count} have VMTools"
+    # If we specifc an array of --os
+    if Options.os
+      puts "Checking OS on #{vmids.count} VMs"
+      vmids.each do |i| 
+        match = false
+        vmos = (findVmItemById(i,'guestOsName'))
+        Options.os.each do |o|
+          # If OS matches one of the array values
+          if vmos && !vmos.empty? && vmos.upcase.include?(o.upcase) 
+            match = true
+          end
+        end
+        # Delete from array if there is no OS match
+        if !match 
+          vmids_to_del << i
+        end
+      end
+      puts " - #{vmids_to_del.count} have failed the OS check for #{Options.os}"
+      vmids = vmids.reject{ |e| vmids_to_del.include? e }
+    end
+    if Options.sizerange 
+      puts "Checking VMDK size on #{vmids.count} VMs"
+      vmids.each do |i|
+        vmdks = bToG(getVmdkSize(i)).round
+        if vmdks.between?(Options.sizerange[0].to_i,Options.sizerange[1].to_i)
+          next
+        else  
+          vmids_to_del_vmdk << i
+        end
+      end
+      puts " - #{vmids_to_del_vmdk.count} have failed the VMDK check for #{Options.sizerange} gb total size"
+      vmids = vmids.reject{ |e| vmids_to_del_vmdk.include? e }
+    end
+    puts "Setting #{vmids.count} to #{Options.assure}"
+    $v = true
+  end
+  
+  vmids.each do |id|
+    if $v
+      print "."
+    end
+    effectiveSla = sla_hash[findVmItemById(id, 'effectiveSlaDomainId')]
+    if Options.assure && (effectiveSla != Options.assure) then
+      require 'setSla.rb'
+      if Options.assure == effectiveSla
+        puts "Looks like its set"
+      else
+        if sla_hash.invert[Options.assure]
+          res = setSla(id, sla_hash.invert[Options.assure])
+          if !res.nil?
+  	    res = JSON.parse(res)
+          else
+            puts "Rubrik SLA Domain does NOT exist, cannot comply"
+          end
         end
       end
     end
+  end
+  if $v
+   puts "Done"
   end
 end
