@@ -187,7 +187,7 @@ if Options.dr then
     latestSnapshot =  h['data'][0]['id']
     #Get vmWare Hosts for the Cluster
     hostList = Array.new
-    o = setToApi('/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+    o = setToApi('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
@@ -292,9 +292,6 @@ if Options.sla then
         res = setSla(findVmItem(Options.vm, 'id'), sla_hash.invert[Options.assure])
         if !res.nil?
 	         res = JSON.parse(res)
-         # if res["effectiveSlaDomain"]["name"] == @Options.assure
-         #   puts "#{@Options.assure}"
-         # end
         else
           puts "Rubrik SLA Domain does NOT exist, cannot comply"
         end
