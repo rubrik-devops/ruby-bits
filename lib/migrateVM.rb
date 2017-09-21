@@ -43,8 +43,8 @@ class MigrateVM
     checkManagedBy(Creds["fromVCenter"],vmobj)
 
 # Snapshot the VM and monitor to completion
-    id=findVmItem(vmobj['VMName'],'id')
-    effectiveSla = Sla_hash[findVmItem(vmobj['VMName'], 'effectiveSlaDomainId')]
+    id=findVmItemByName(vmobj['VMName'],'id')
+    effectiveSla = Sla_hash[findVmItemByName(vmobj['VMName'], 'effectiveSlaDomainId')]
     logme("#{vmobj['VMName']}","Request Snapshot",id)
     snapshot_job = JSON.parse(setToApi('rubrik','/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
     logme("#{vmobj['VMName']}","Monitor Snapshot Request",snapshot_job)
@@ -153,7 +153,7 @@ class MigrateVM
 
 # Reset the SLA Domain on the Recovered VM
 #    logme("#{vmobj['VMName']}","Reset SLA Domain",effectiveSla)
-#    id=findVmItem(vmobj['VMName'],'id')
+#    id=findVmItemByName(vmobj['VMName'],'id')
 #    setSla(id,effectiveSla)
     logme("#{vmobj['VMName']}","Work Complete","#{self.current_actor}")
   end
