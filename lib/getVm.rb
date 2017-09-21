@@ -6,7 +6,7 @@ require 'getFromApi.rb'
 def findVmItemByName(t, item)
   t = t.upcase
   begin
-    h = getFromApi('/api/v1/vmware/vm?is_relic=false&name='+t)
+    h = getFromApi('rubrik','/api/v1/vmware/vm?is_relic=false&name='+t)
     h['data'].each do |v|
       if v['name'].upcase == t
         return v[item]
@@ -20,7 +20,7 @@ end
 
 def findVmItemById(t, item)
   begin
-    h = getFromApi("/api/v1/vmware/vm/#{t}")
+    h = getFromApi('rubrik',"/api/v1/vmware/vm/#{t}")
     return h[item]
   rescue StandardError => e
     return false
@@ -29,10 +29,10 @@ end
  
 def getVmdkSize(id)
   begin
-    h = getFromApi("/api/v1/vmware/vm/#{id}")
+    h = getFromApi('rubrik',"/api/v1/vmware/vm/#{id}")
     sa = []
     h['virtualDiskIds'].each do |d|
-      sa << getFromApi("/api/v1/vmware/vm/virtual_disk/#{d}")['size'] 
+      sa << getFromApi('rubrik',"/api/v1/vmware/vm/virtual_disk/#{d}")['size'] 
     end
     return sa.inject(:+)
   rescue StandardError => e

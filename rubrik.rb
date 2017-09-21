@@ -288,26 +288,22 @@ if Options.sla then
     end
     exit
   end
-
   vmids = []
   vmids_to_del = []
   vmids_to_del_vmdk = []
   if Options.vm 
     vmids << findVmItemByName(Options.vm, 'id')
   end
-
   if Options.os || Options.sizerange
-
     # See if tools is installed on the VM and add to array
     puts "Qualifying SLA Membership"
-    vms = getFromApi("/api/v1/vmware/vm?isRelic=false&limit=20&primaryclusterid=local")['data']
+    vms = getFromApi('rubrik',"/api/v1/vmware/vm?isRelic=false&limit=20&primaryclusterid=local")['data']
     puts "Checking Tools on #{vms.count} VMs"
     vms.each do |vm|
       if vm['toolsInstalled']
         vmids << vm['id']
       end
     end
-
     puts " - #{vmids.count} of #{vms.count} have VMTools"
     # If we specifc an array of --os
     if Options.os
