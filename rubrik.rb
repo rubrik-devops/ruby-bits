@@ -234,7 +234,7 @@ if Options.sla then
   vmids_to_del = []
   vmids_to_del_vmdk = []
   if Options.vm 
-    ids << findVmItemByName(Options.vm, 'id')
+    vmids << findVmItemByName(Options.vm, 'id')
   end
 
   if Options.os || Options.sizerange
