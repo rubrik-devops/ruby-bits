@@ -37,6 +37,17 @@ def startVm(vcenter,vmobj)
   logme("#{vm.name}","Checking Power State ", vm.runtime.powerState.capitalize)
 end
 
+def getVm(vcenter,vmobj)
+  begin
+    vim = RbVmomi::VIM.connect(host: "#{vcenter['servers'].sample(1)[0]}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")
+    dc = vim.serviceInstance.find_datacenter(vmobj['datacenter']) || fail('datacenter not found')
+    return findvm(dc.vmFolder,vmobj['objectName'])
+  rescue standardError=>e
+    puts e
+  end
+end
+
+
 def checkCD(vcenter,vmobj)
   begin
     vim = RbVmomi::VIM.connect(host: "#{vcenter['server']}", user: "#{vcenter['username']}", password: "#{vcenter['password']}", insecure: "true")

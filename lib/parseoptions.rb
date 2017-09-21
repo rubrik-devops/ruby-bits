@@ -52,8 +52,14 @@ class ParseOptions
     end
     opts.separator ""
     opts.separator "Report options:"
-    opts.on('-r','--report [string]', "Return Requested Report Data") do |g|
-      options[:report] = g;
+    opts.on('-r','--envision [string]', "Return Requested Envision Report Table Data") do |g|
+      options[:envision] = g;
+    end
+    opts.on('--tag [string]', "Reference vmware tag (key by moref)") do |g|
+      options[:tag] = g;
+    end
+    opts.on('--vmusage', "Return CSV of per-vm usage") do |g|
+      options[:vmusage] = g;
     end
     opts.on('-o','--outfile [string]', "Specify Filename to Write out (STDOUT if not set)") do |g|
       options[:outfile] = g;
