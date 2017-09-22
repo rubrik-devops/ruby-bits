@@ -53,7 +53,7 @@ class ParseOptions
     opts.on('-t', '--threads [string]', "Number of simultaneous migrations") do |t|
       options[:threads] = t;
     end
-    opts.on('--sla',"Perform and SLA Operation (used with --get or --assure") do |g|
+    opts.on('--sla [string]',"Perform and SLA Operation (used with --get or --assure") do |g|
       options[:sla] = g;
     end
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|

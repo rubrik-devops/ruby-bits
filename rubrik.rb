@@ -268,11 +268,23 @@ if Options.odb then
     vmids << findVmItemByName(Options.vm, 'id')
   end  
   if Options.infile
-    vmlist = CSV.read(Options.infile, {:headers => true})
-    vmlist.each do |vm|
+    vms = CSV.read(Options.infile, {:headers => true})
+    vms.each do |vm|
        vmids << findVmItemByName(vm['name'], 'id')
     end
   end
+  if Options.sla
+    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']
+    vms.each do |vm|
+      eSla = sla_hash[vm['effectiveSlaDomainId']]
+      if eSla == Options.sla 
+        vmids << vm['id']
+      end
+    end
+  end
+
+
+
   vmids.each do |vm|
     if Options.assure 
       o = setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post")

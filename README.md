@@ -34,7 +34,7 @@ Specific options:
         --short                      Only perform the source side tasks and ODB
     -i, --infile [string]            Path to CSV file to run drcsv/odb against
     -t, --threads [string]           Number of simultaneous migrations
-        --sla                        Perform and SLA Operation (used with --get or --assure
+        --sla                        Perform and SLA Operation (used with --get or --assure or --odb)
         --list                       Audit SLA configuration (used with --sla)
 
 Report options:
@@ -82,6 +82,12 @@ Unmounting 'win018 08-01 13:04 2'
 ```
 ## Run On Demand Backups for a client, or a .csv. Allows you to set SLA Domain  (column with the header of 'name' will be used)
 ```
+Command - ruby .\rubrik.rb --odb --sla Gold --assure Gold
+Requesting backup of win013, setting to Gold SLA Domain - QUEUED
+Requesting backup of devops1006, setting to Gold SLA Domain - QUEUED
+Requesting backup of devops1008, setting to Gold SLA Domain - QUEUED
+Requesting backup of devops-jenkins, setting to Gold SLA Domain - QUEUED
+
 Command - ruby .\rubrik.rb --odb --infile .\infile.csv
 Requesting backup of devops-dc01, not setting SLA domain - QUEUED
 Requesting backup of devops-dc02, not setting SLA domain - QUEUED
