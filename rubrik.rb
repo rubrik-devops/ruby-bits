@@ -341,7 +341,8 @@ if Options.sla || Options.sla.nil? then
     # If we specifc an array of --os
     if Options.os
       puts "Checking OS on #{vmids.count} VMs"
-      vmids.each do |i| 
+      vmids.each_with_index do |i,num| 
+        print " - #{num+1}\r"
         match = false
         vmos = (findVmItemById(i,'guestOsName'))
         Options.os.each do |o|
@@ -355,12 +356,14 @@ if Options.sla || Options.sla.nil? then
           vtd << i
         end
       end
+      puts
       puts " - #{vtd.count} fail the OS check for #{Options.os}"
       vmids = vmids.reject{ |e| vtd.include? e }
     end
     if Options.sr 
       puts "Checking VMDK size on #{vmids.count} VMs"
-      vmids.each do |i|
+      vmids.each_with_index do |i,num| 
+        print " - #{num+1}\r"
         vmdks = bToG(getVmdkSize(i)).round
         if vmdks.between?(Options.sr[0].to_i,Options.sr[1].to_i)
           next
@@ -368,25 +371,23 @@ if Options.sla || Options.sla.nil? then
           vtdv << i
         end
       end
+      puts
       puts " - #{vtdv.count} fail the VMDK check for #{Options.sr} gb total size"
       vmids = vmids.reject{ |e| vtdv.include? e }
     end
     puts "Setting #{vmids.count} to #{Options.assure}"
     $v = true
   end
-  vmids.each do |id|
+  vmids.each_with_index do |i,num| 
     if $v
-      print "."
+      print " - #{num+1}\r"
     end
-    effectiveSla = sla_hash[findVmItemById(id, 'effectiveSlaDomainId')]
+    effectiveSla = sla_hash[findVmItemById(i, 'effectiveSlaDomainId')]
     if Options.assure && (effectiveSla != Options.assure) then
       require 'setSla.rb'
       if sla_hash.invert[Options.assure]
         res = setSla(id, sla_hash.invert[Options.assure])
       end
     end
-  end
-  if $v
-   puts "Done"
   end
 end
