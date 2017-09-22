@@ -17,15 +17,18 @@ end
 def odb (vmids)
   require 'getSlaHash.rb'
   sla_hash = getSlaHash()
-  vmids.each do |vm|
+  puts "Requesting #{vmids.count} Snapshots"
+  vmids.each_with_index do |vm,num|
     if Options.assure 
       o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post"))['status']
-      puts "Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}"
+      print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     else
       o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
-      puts "Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}"
+      print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     end
+    $stdout.flush
   end
+  puts
 end
 
 def bToG (b)     
@@ -283,8 +286,8 @@ if Options.odb then
     (CSV.read(Options.infile, {:headers => true})).each do |vm|
        vmids << findVmItemByName(vm['name'], 'id')
     end
-  end
   odb(vmids)
+  end
 end
 
 
@@ -293,7 +296,7 @@ if Options.sla || Options.sla.nil? then
   require 'getFromApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
-  if Options.odb
+  if Options.odb && !Options.infile
     (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
         vmids << vm['id']
