@@ -389,7 +389,7 @@ if Options.sla || Options.sla.nil? then
     if Options.assure && (effectiveSla != Options.assure) then
       require 'setSla.rb'
       if sla_hash.invert[Options.assure]
-        res = setSla(id, sla_hash.invert[Options.assure])
+        res = setSla(i, sla_hash.invert[Options.assure])
       end
     end
   end
