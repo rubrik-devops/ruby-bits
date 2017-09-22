@@ -14,6 +14,20 @@ class Hash
 end
 
 
+def odb (vmids)
+  require 'getSlaHash.rb'
+  sla_hash = getSlaHash()
+  vmids.each do |vm|
+    if Options.assure 
+      o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post"))['status']
+      puts "Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}"
+    else
+      o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
+      puts "Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}"
+    end
+  end
+end
+
 def bToG (b)     
   (((b.to_f/1024/1024/1024) * 100) / 100) 
 end
@@ -261,61 +275,43 @@ end
 
 if Options.odb then
   require 'setToApi.rb'
-  require 'getSlaHash.rb'
-  sla_hash = getSlaHash()
   vmids = []
   if Options.vm then
     vmids << findVmItemByName(Options.vm, 'id')
   end  
   if Options.infile
-    vms = CSV.read(Options.infile, {:headers => true})
-    vms.each do |vm|
+    (CSV.read(Options.infile, {:headers => true})).each do |vm|
        vmids << findVmItemByName(vm['name'], 'id')
     end
   end
-  if Options.sla
-    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']
-    vms.each do |vm|
-      eSla = sla_hash[vm['effectiveSlaDomainId']]
-      if eSla == Options.sla 
-        vmids << vm['id']
-      end
-    end
-  end
-
-
-
-  vmids.each do |vm|
-    if Options.assure 
-      o = setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post")
-      puts "Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o['status']}"
-    else
-      o = setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post")
-      puts "Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o['status']}"
-    end
-  end
+  odb(vmids)
 end
 
-if Options.sla then
+
+if Options.sla || Options.sla.nil? then
   require 'getSlaHash.rb'
   require 'getFromApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
+  if Options.odb
+    (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
+      if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
+        vmids << vm['id']
+      end
+    end
+    odb(vmids)
+    exit
+  end
   if Options.get then
-    effectiveSla = sla_hash[findVmItemByName(Options.vm, 'effectiveSlaDomainId')]
-    # Get the SLA Domain for node
-    puts "#{effectiveSla}"
+    puts (sla_hash[findVmItemByName(Options.vm, 'effectiveSlaDomainId')])
     exit
   end
   if Options.list then
-    listData = getFromApi('rubrik',"/api/v1/vmware/vm?limit=9999")
-    listData['data'].each do |s|
-      lookupSla = s['effectiveSlaDomainId']
-      if lookupSla == 'UNPROTECTED' then
+    (getFromApi('rubrik',"/api/v1/vmware/vm?limit=9999"))['data'].each do |s|
+      if s['effectiveSlaDomainId'] == 'UNPROTECTED' then
         puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
       else
-        slData = getFromApi('rubrik',"/api/v1/sla_domain/#{lookupSla}")
-        if s['primaryClusterId'] == slData['primaryClusterId'] then
+        if s['primaryClusterId'] == (getFromApi('rubrik',"/api/v1/sla_domain/#{s['effectiveSlaDomainId']}"))['primaryClusterId'] 
           result = "Proper SLA Assignment"
         else
           result = "Check SLA Assignemnt!"
@@ -378,7 +374,6 @@ if Options.sla then
     puts "Setting #{vmids.count} to #{Options.assure}"
     $v = true
   end
-  
   vmids.each do |id|
     if $v
       print "."
@@ -386,17 +381,8 @@ if Options.sla then
     effectiveSla = sla_hash[findVmItemById(id, 'effectiveSlaDomainId')]
     if Options.assure && (effectiveSla != Options.assure) then
       require 'setSla.rb'
-      if Options.assure == effectiveSla
-        puts "Looks like its set"
-      else
-        if sla_hash.invert[Options.assure]
-          res = setSla(id, sla_hash.invert[Options.assure])
-          if !res.nil?
-  	    res = JSON.parse(res)
-          else
-            puts "Rubrik SLA Domain does NOT exist, cannot comply"
-          end
-        end
+      if sla_hash.invert[Options.assure]
+        res = setSla(id, sla_hash.invert[Options.assure])
       end
     end
   end
