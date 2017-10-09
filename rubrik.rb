@@ -13,6 +13,32 @@ class Hash
    end
 end
 
+def livemount (vmids)
+  require 'getSlaHash.rb'
+  require 'setToApi.rb'
+  sla_hash = getSlaHash()
+  if Options.unmount
+    puts "Requesting #{vmids.count} Unmounts"
+    (getFromApi('rubrik',"/api/v1/vmware/vm/snapshot/mount"))['data'].each do |mount|
+      if (vmids.include? mount['vmId']) && mount['isReady']
+        puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
+        setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount['id']}",'',"delete")
+      elsif (vmids.include? mount['vmId']) && !mount['isReady']
+        puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
+        
+
+      end
+    end
+  end
+  if Options.livemount
+    puts "Requesting #{vmids.count} Live Mounts"
+    vmids.each_with_index do |vm,num|
+      vmd = getFromApi('rubrik',"/api/v1/vmware/vm/#{vm}")
+      puts "#{num+1}: Requesting Livemount - #{vmd['name']} (#{vmd['snapshots'].last['date']})"
+      setToApi('rubrik',"/api/v1/vmware/vm/snapshot/#{vmd['snapshots'].last['id']}/mount",'',"post")
+    end
+  end
+end
 
 def odb (vmids)
   require 'getSlaHash.rb'
@@ -26,7 +52,7 @@ def odb (vmids)
       o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
       print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     end
-    $stdout.flush
+    STDOUT.flush
   end
   puts
 end
@@ -296,9 +322,20 @@ if Options.sla || Options.sla.nil? then
   require 'getFromApi.rb'
   require 'getVm.rb'
   sla_hash = getSlaHash()
+  vmids=[]
+  if (Options.livemount || Options.unmount) && !Options.infile
+    (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
+      if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
+        vmids << vm['id']
+      end
+    end
+    livemount(vmids)
+    exit
+  end
   if Options.odb && !Options.infile
     (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
+        puts "#{vm['name']}"
         vmids << vm['id']
       end
     end

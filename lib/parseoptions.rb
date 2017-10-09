@@ -59,6 +59,12 @@ class ParseOptions
     opts.on('--sla [string]',"Perform and SLA Operation used with --odb") do |g|
       options[:sla] = g;
     end
+    opts.on('--livemount',"Perform livemount of SLA Domain") do |g|
+      options[:livemount] = g;
+    end
+    opts.on('--unmount',"Perform umount of SLA Domain") do |g|
+      options[:unmount] = g;
+    end
     opts.on('--list', "Audit SLA configuration (used with --sla)") do |g|
       options[:list] = g;
     end
