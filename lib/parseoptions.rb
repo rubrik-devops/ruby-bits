@@ -32,9 +32,6 @@ class ParseOptions
     opts.on('--os string,string',Array,"Assure SLA based on OS type") do |g|
       options[:os] = g;
     end
-    opts.on('--odb', "On demand backup of --client or --infile") do |g|
-      options[:odb] = g;
-    end
     opts.on('--dr', "Instant Recovery of --client") do |g|
       options[:dr] = g;
     end
@@ -56,8 +53,11 @@ class ParseOptions
     opts.on('--sla',"Perform and SLA Operation --get and --assure") do |g|
       options[:sla] = g;
     end
-    opts.on('--sla [string]',"Perform and SLA Operation used with --odb") do |g|
+    opts.on('--sla [string]',"Perform and SLA Operation used with --odb and livemount/unmount") do |g|
       options[:sla] = g;
+    end
+    opts.on('--odb', "On demand backup of --client or --infile") do |g|
+      options[:odb] = g;
     end
     opts.on('--livemount',"Perform livemount of SLA Domain") do |g|
       options[:livemount] = g;

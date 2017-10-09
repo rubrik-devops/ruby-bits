@@ -27,14 +27,16 @@ Specific options:
     -a, --assure [string]            String to set in SET operation (in case of --sla, it's the SLA Name)
         --sizerange low,high         Assure SLA based on VM VMDK sizes in Gigabyte (low,high)
         --os string,string           Assure SLA based on OS type
-        --odb                        On demand backup of --client or --infile
         --dr                         Instant Recovery of --client
         --drcsv                      Instant Recovery of a csv of clients
     -s                               Startup VM before vMotion (Defaults to After)
         --short                      Only perform the source side tasks and ODB
     -i, --infile [string]            Path to CSV file to run drcsv/odb against
     -t, --threads [string]           Number of simultaneous migrations
-        --sla                        Perform and SLA Operation (used with --get or --assure or --odb)
+        --sla [string]               Perform and SLA Operation used with --odb and livemount/unmount
+        --odb                        On demand backup of --client or --infile
+        --livemount                  Perform livemount of SLA Domain
+        --unmount                    Perform umount of SLA Domain
         --list                       Audit SLA configuration (used with --sla)
 
 Report options:
@@ -65,20 +67,23 @@ Common options:
     -p, --password [password]        Rubrik Cluster Password
     -h, --help                       Show this message
 
-
 ```
 
 # Examples:
 ## Live Mount all latest snapshots for each VM in a SLA Domain
 ### Live Mount
 ```
-Command - ruby .\rubrik.rb --sla --livemount Silver -u admin -p password -n my.rubrik.cluster
-Mounting win018  19e38c78-e10d-4c06-a009-3de2da2cb41f  2017-08-01T13:04:35Z
+Command -  ruby .\rubrik.rb --livemount --sla Bronze
+Requesting 2 Live Mounts
+1: Requesting Livemount - vCommander-002 (2017-10-09T18:56:28Z)
+2: Requesting Livemount - th-ubu-chef-client (2017-10-09T18:09:25Z)
 ```
 ### Unmount
 ```
-Command - ruby .\rubrik.rb --sla --livemount Silver --unmount -u admin -p password -n my.rubrik.cluster
-Unmounting 'win018 08-01 13:04 2'
+Command - ruby .\rubrik.rb --unmount --sla Bronze
+Requesting 2 Unmounts
+Requesting Unmount - (th-ubu-chef-client 10-09 18:09 2)
+Requesting Unmount - (vCommander-002 10-09 18:56 0)
 ```
 ## Run On Demand Backups for a client, or a .csv. Allows you to set SLA Domain  (column with the header of 'name' will be used)
 ```
