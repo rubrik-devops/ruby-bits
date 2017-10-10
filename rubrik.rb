@@ -34,6 +34,10 @@ def livemount (vmids)
     puts "Requesting #{vmids.count} Live Mounts"
     vmids.each_with_index do |vm,num|
       vmd = getFromApi('rubrik',"/api/v1/vmware/vm/#{vm}")
+      if vmd['snapshots'].empty?
+        puts "#{num+1}: Requesting Livemount - #{vmd['name']} (Denied - No Snapshots)"
+        next
+      end
       puts "#{num+1}: Requesting Livemount - #{vmd['name']} (#{vmd['snapshots'].last['date']})"
       setToApi('rubrik',"/api/v1/vmware/vm/snapshot/#{vmd['snapshots'].last['id']}/mount",'',"post")
     end
