@@ -83,6 +83,14 @@ class ParseOptions
       options[:outfile] = g;
     end
     opts.separator ""
+    opts.separator "Fileset options:"
+    opts.on('--split', "Parse treesizes xml") do |g|
+      options[:split] = g;
+    end
+    opts.on('--fsmake', "Generate Filesets") do |g|
+      options[:filesetgen] = g;
+    end
+    opts.separator ""
     opts.separator "Metric options:"
     opts.on('--metric', "Return Requested Metric") do |g|
       options[:metric] = g;

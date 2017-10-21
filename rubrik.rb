@@ -25,8 +25,6 @@ def livemount (vmids)
         setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount['id']}",'',"delete")
       elsif (vmids.include? mount['vmId']) && !mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
-        
-
       end
     end
   end
@@ -111,8 +109,44 @@ if Options.file then
   end
 end
 
-if Options.metric then
+if Options.split && Options.infile
+  require 'setToApi.rb'
+  depth = 2
+  lines = File.open(Options.infile)
+  blah=Hash.new
+  path=''
+  par = []
+  lines.each do |line|
+    if line.include? "Folder fullpath"
+      path=line[/fullpath\=\"(.*?)\"/,1]
+      blah[path]=''
+    else line.include? "SizeData"
+      if !path.empty?
+        path = (path.gsub(/\\/, "/")).gsub(/^.\:\//,"/") 
+        depth = path.scan(/(?=\/)/).count
+        count = line[/.*Files\=\"(.*?)\".*/,1]
+        size = (line[/.*Size\=\"(.*?)\".*/,1]).to_f/1073741824
+        if (depth > 1 && depth < 3) && (count.to_i > 200000 || size.to_i > 5000)
+          next if par.include? path
+          par << path
+          path = "#{path}**"
+          if Options.filesetgen
+            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(path)}"))['total'] > 0
+              op = "Fileset Exists"
+            else
+              op =  "Created Fileset"
+              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => ["#{path}"],"name" => "#{path}"} ,"post")
+            end
+          end
+          puts "#{depth} | #{count} | #{size} | #{path} | #{op}"
+        end
+      end
+    end
+  end
+  exit
+end
 
+if Options.metric then
   if Options.storage then
     h=getFromApi('rubrik',"/api/internal/stats/system_storage")
   end
