@@ -132,11 +132,12 @@ if Options.split && Options.infile
           path = "#{path}**"
           op = "No Fileset Operation"
           if Options.filesetgen && Options.sharename
-            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(path)}"))['total'] > 0
+            sharepath = "//#{Options.sharename}#{path}"
+            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
               op = "Fileset Exists"
             else
               op =  "Created Fileset"
-              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => ["#{path}"],"name" => "#{Options.sharename}/#{path}"} ,"post")
+              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
             end
           end
           puts "#{depth} | #{count} | #{size} | #{path} | #{op}"
@@ -145,7 +146,7 @@ if Options.split && Options.infile
     end
   end
   if Options.filesetgen && Options.sharename
-    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => par,"name" => "#{Options.sharename}/CatchAll"} ,"post")
+    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
   end
   exit
 end

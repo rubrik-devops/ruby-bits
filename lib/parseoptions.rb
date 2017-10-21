@@ -87,6 +87,9 @@ class ParseOptions
     opts.on('--split', "Parse treesizes xml") do |g|
       options[:split] = g;
     end
+    opts.on('--sharename [string]', "Share to add Filesets to") do |g|
+      options[:sharename] = g;
+    end
     opts.on('--fsmake', "Generate Filesets") do |g|
       options[:filesetgen] = g;
     end
