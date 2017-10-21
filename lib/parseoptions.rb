@@ -90,6 +90,12 @@ class ParseOptions
     opts.on('--sharename [string]', "Share to add Filesets to") do |g|
       options[:sharename] = g;
     end
+    opts.on('--sharetype [string]', "SMB or NFS") do |g|
+      options[:sharetype] = g;
+    end
+    opts.on('--hostname [string]', "Host to add Filesets to") do |g|
+      options[:hostname] = g;
+    end
     opts.on('--fsmake', "Generate Filesets") do |g|
       options[:filesetgen] = g;
     end

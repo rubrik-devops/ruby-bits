@@ -109,17 +109,40 @@ if Options.file then
   end
 end
 
-if Options.split && Options.infile
+if Options.split && Options.infile && Options.sharename && Options.sharetype
   require 'setToApi.rb'
+  require 'getSlaHash.rb'
+  sla_hash = getSlaHash()
+  host = getFromApi('rubrik',"/api/v1/host?hostname=#{URI::encode(Options.hostname)}")
+  if host['total'] == 0
+    puts "#{Options.hostname} is not configured on Rubrik"
+  else
+    hostId = host['data'][0]['id']
+    shares = getFromApi('rubrik',"/api/internal/host_fileset/share?hostname=#{URI::encode(Options.hostname)}&share_type=#{URI::encode(Options.sharetype)}")
+    if shares['total'] == 0
+      puts "No shares configured for #{Options.hostname}"
+      exit
+    else
+      shareId=''
+      shares['data'].each do |share|
+        if share['exportPoint'] == Options.sharename
+          shareId = share['id']
+        end
+      end
+      if shareId == ''
+        puts "#{Options.sharename} (#{Options.sharetype}) does not exist on Rubrik for #{Options.hostname}"
+        exit
+      end
+    end
+  end
+  puts "Configuring filesets for #{Options.hostname} (#{hostId}) - #{Options.sharename} (#{shareId})"
   depth = 2
   lines = File.open(Options.infile)
-  blah=Hash.new
   path=''
   par = []
   lines.each do |line|
     if line.include? "Folder fullpath"
       path=line[/fullpath\=\"(.*?)\"/,1]
-      blah[path]=''
     else line.include? "SizeData"
       if !path.empty?
         path = (path.gsub(/\\/, "/")).gsub(/^.\:\//,"/") 
@@ -136,17 +159,30 @@ if Options.split && Options.infile
             if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
               op = "Fileset Exists"
             else
-              op =  "Created Fileset"
-              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
+              op = "Created Fileset"
+              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
+            end
+            templateId = getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}")['data'][0]['id']
+            association = ''
+            association = getFromApi('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}")['total']
+            if association == 0  
+              op2="Create Association"
+              o = setToApi('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
+              if Options.assure
+                slaId = sla_hash.invert[Options.assure]
+                c = setToApi('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
+              end
+            else
+              op2="Association Exists"
             end
           end
-          puts "#{depth} | #{count} | #{size} | #{path} | #{op}"
+          puts "#{depth} | #{count} | #{size} | #{path} | #{op} | #{op2}"
         end
       end
     end
   end
   if Options.filesetgen && Options.sharename
-    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "SMB", "includes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
+    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{sharetype}", "includes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
   end
   exit
 end
@@ -360,7 +396,7 @@ if Options.odb then
 end
 
 
-if Options.sla || Options.sla.nil? then
+if (Options.sla || Options.sla.nil?) && !Options.split then
   require 'getSlaHash.rb'
   require 'getFromApi.rb'
   require 'getVm.rb'
