@@ -182,7 +182,7 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
     end
   end
   if Options.filesetgen && Options.sharename
-    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{sharetype}", "includes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
+    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => "**", "excludes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
   end
   exit
 end
