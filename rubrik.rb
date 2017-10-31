@@ -18,7 +18,7 @@ def livemount (vmids)
   require 'setToApi.rb'
   sla_hash = getSlaHash()
   if Options.unmount
-    puts "Requesting #{vmids.count} Unmounts"
+    puts "Checking and Requesting #{vmids.count} Unmounts"
     (getFromApi('rubrik',"/api/v1/vmware/vm/snapshot/mount"))['data'].each do |mount|
       if (vmids.include? mount['vmId']) && mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
@@ -131,7 +131,7 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
       end
       if shareId == ''
         puts "#{Options.sharename} (#{Options.sharetype}) does not exist on Rubrik for #{Options.hostname}"
-        exit
+        #exit
       end
     end
   end
@@ -140,47 +140,63 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
   lines = File.open(Options.infile)
   path=''
   par = []
+  dirs = {} 
   lines.each do |line|
     if line.include? "Folder fullpath"
       path=line[/fullpath\=\"(.*?)\"/,1]
-    else line.include? "SizeData"
+    elsif line.include? "SizeData"
+      count = line[/.*Files\=\"(.*?)\".*/,1]
+      size = (line[/.*Size\=\"(.*?)\".*/,1]).to_f/1073741824
       if !path.empty?
-        path = (path.gsub(/\\/, "/")).gsub(/^.\:\//,"/") 
-        depth = path.scan(/(?=\/)/).count
-        count = line[/.*Files\=\"(.*?)\".*/,1]
-        size = (line[/.*Size\=\"(.*?)\".*/,1]).to_f/1073741824
-        if (depth > 1 && depth < 3) && (count.to_i > 200000 || size.to_i > 5000)
-          next if par.include? path
-          par << path
-          path = "#{path}**"
-          op = "No Fileset Operation"
-          if Options.filesetgen && Options.sharename
-            sharepath = "//#{Options.sharename}#{path}"
-            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
-              op = "Fileset Exists"
-            else
-              op = "Created Fileset"
-              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
-            end
-            templateId = getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}")['data'][0]['id']
-            association = ''
-            association = getFromApi('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}")['total']
-            if association == 0  
-              op2="Create Association"
-              o = setToApi('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
-              if Options.assure
-                slaId = sla_hash.invert[Options.assure]
-                c = setToApi('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
-              end
-            else
-              op2="Association Exists"
-            end
-          end
-          puts "#{depth} | #{count} | #{size} | #{path} | #{op} | #{op2}"
+        if path.include? "\\"
+          path = (path.gsub(/\\/, "/")) 
         end
+        path = path.split(Options.sharename)[1]
+        path = "#{path}**"
+        depth = (path.scan(/(?=\/)/).count) 
+        sharepath = "//#{Options.sharename}#{path}"
+        dirs[path] = {}
+        dirs[path]['size'] = size.to_i
+        dirs[path]['sharepath'] = sharepath
+        dirs[path]['count'] = count.to_i
+        dirs[path]['depth'] = depth.to_i
       end
     end
   end
+  dirs.each_key do |d|
+    if ((dirs[d]['count'] > 500000 || dirs[d]['size'] > 2000) && dirs[d]['depth'] < 6) || dirs[d]['depth'] == 1
+      puts "#{dirs[d]['depth']}|#{dirs[d]['count']}|#{dirs[d]['size']}|#{d}"
+    end
+  end
+  exit
+#        if (depth > 1 && depth < 3) && (count.to_i > 200000 || size.to_i > 5000)
+#          next if par.include? path
+#          par << path
+#          path = "#{path}**"
+#          op = "No Fileset Operation"
+#          if Options.filesetgen && Options.sharename
+#            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
+#              op = "Fileset Exists"
+#            else
+#              op = "Created Fileset"
+#              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
+#            end
+#            templateId = getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}")['data'][0]['id']
+#            association = ''
+#            association = getFromApi('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}")['total']
+#            if association == 0  
+#              op2="Create Association"
+#              o = setToApi('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
+#              if Options.assure
+#                slaId = sla_hash.invert[Options.assure]
+#                c = setToApi('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
+#              end
+#            else
+#              op2="Association Exists"
+#            end
+#          end
+#          puts "#{depth} | #{count} | #{size} | #{path} | #{op} | #{op2}"
+#        end
   if Options.filesetgen && Options.sharename
     o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => "**", "excludes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
   end
