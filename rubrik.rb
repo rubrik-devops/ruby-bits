@@ -109,6 +109,13 @@ if Options.file then
   end
 end
 
+if Options.fsbackup
+  templates = getFromApi('rubrik',"/api/v1/fileset_template")
+  filesets = getFromApi('rubrik',"/api/v1/fileset")
+  File.open(Logtime.to_s + "_templates.json", 'a') { |f| PP.pp(templates,f) }
+  File.open(Logtime.to_s + "_filesets.json", 'a') { |f| PP.pp(filesets,f) }
+end
+
 if Options.split && Options.infile && Options.sharename && Options.sharetype
   require 'setToApi.rb'
   require 'getSlaHash.rb'
@@ -202,6 +209,26 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
   end
   exit
 end
+
+if Options.fsreport 
+  puts ('"Share Name","Fileset Name","Snapshot Count","Last Snapshot Date","File Count","Size"')
+  shares = {}
+  getFromApi('rubrik',"/api/internal/host/share")['data'].each do |sh|
+    shares[sh['id']] = sh['exportPoint']
+  end
+  getFromApi('rubrik',"/api/v1/fileset")['data'].each do |fs|
+    size=0
+    fileset = getFromApi('rubrik',"/api/v1/fileset/#{fs['id']}")
+    next if fileset['configuredSlaDomainName'] != "Milbank NAS Backup SLA"
+    getFromApi('rubrik',"/api/v1/fileset/snapshot/#{fileset['snapshots'].last['id']}/browse?path=%2F")['data'].each do |mysize|
+      size += mysize['size']
+    end
+    #date = fileset['snapshots'].last['date'].gsub(/^(.*)T(.*)Z$/, '\1 \2')
+    puts ("#{shares[fileset['shareId']]},#{fileset['name']},#{fileset['snapshotCount']},#{fileset['snapshots'].last['date'].gsub(/^(.*)T(.*)Z$/, '\1 \2')},#{fileset['snapshots'].last['fileCount']},#{size}")
+  end
+end
+
+  
 
 if Options.metric then
   if Options.storage then

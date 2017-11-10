@@ -84,8 +84,14 @@ class ParseOptions
     end
     opts.separator ""
     opts.separator "Fileset options:"
+    opts.on('--fsbackup', "Dump fileset configurations") do |g|
+      options[:fsbackup] = g;
+    end
     opts.on('--split', "Parse treesizes xml") do |g|
       options[:split] = g;
+    end
+    opts.on('--fsreport', "Generates CSV of useful fileset stats") do |g|
+      options[:fsreport] = g;
     end
     opts.on('--sharename [string]', "Share to add Filesets to") do |g|
       options[:sharename] = g;
