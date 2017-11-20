@@ -1,0 +1,10 @@
+id,logicalBytes,ingestedBytes,exclusivePhysicalBytes,sharedPhysicalBytes,indexStorageBytes,vmname,vcenter,datacenter
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-649,10580,976,427,0,0,msf-sql2016,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-3743,10941,644,152,0,0,devops-loginsight,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-430,3920,140,117,0,0,SE-MFAUST-WIN 05-17 09:33 0,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-25658,2510,515,68,0,0,msfsql16-poc-02,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-15182,3640,169,45,0,0,ora-11gR2-3,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-9670,3840,91,42,0,0,ora-oem,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-222,7180,200,42,0,0,ora-11gR2,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-14,6603,290,41,0,0,devops-vcsa,devops-vcsa.rangers.lab,Santa Clara
+fbcb1f51-9520-4227-a68c-6fe145982f48-vm-9626,2400,106,35,0,0,ora-12c-01,devops-vcsa.rangers.lab,Santa Clara
