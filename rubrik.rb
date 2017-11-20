@@ -441,7 +441,6 @@ if Options.isilon
   puts "Getting last Rubrik_ snap info - \n\t#{isi_last_snap_method} \n\t#{isi_last_snap_call}"
   restCall('isilon',isi_last_snap_call,'','get')['snapshots'].each do |g|
     if g['name'] =~ /^#{isi_snap_prefix}/ && g['path'] == isi_path
-      pp g
       isi_last_snap=g
       break
     end
