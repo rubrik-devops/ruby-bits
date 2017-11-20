@@ -510,13 +510,13 @@ if Options.isilon
     isi_dump_changelist_call = "/platform/1/snapshot/changelists/#{isi_last_snap['id']}_#{isi_new_snap['id']}/lins#{a}"
     isi_dump_changelist_method = "get"
     puts "Dump changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_dump_changelist_method}\n\t#{isi_dump_changelist_call}"
-    lins=restCall('isilon',isi_dump_changelist_call,'','get')
+    lins=restCall('isilon',isi_dump_changelist_call,'','get') # THIS IS THE FILE LIST
     unless tm['ObjectsReturned'] 
       tm['ObjectsReturned'] = 0
     end
-    tm['ObjectsReturned'] += lins['total']
-    tm['ObjectsTotal'] = Options.statfiles if Options.statfiles 
-    tm['DirectoriesTotal'] = Options.statdirs if Options.statdirs 
+    tm['ObjectsReturned'] += lins['total'].to_f
+    tm['ObjectsTotal'] = Options.statfiles.to_f if Options.statfiles 
+    tm['DirectoriesTotal'] = Options.statdirs.to_f if Options.statdirs 
     tm['Resumable'] = lins['resume']
     iter = lins['resume']
   end
@@ -524,6 +524,10 @@ if Options.isilon
   puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
   puts "STATS--------------------------------------------------" 
   pp tm
+  require 'tiny_tds'
+  sql=Creds['sql']
+  db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
+  db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,objectstotal,directoriestotal,dumpchangelist_elapse) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['ObjectsTotal']},#{tm['DirectoriesTotal']},#{tm['DumpChangeList']})").do
   exit
 end
 
