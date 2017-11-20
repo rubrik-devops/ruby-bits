@@ -1,5 +1,4 @@
 require 'net/https'
-require 'JSON'
 require 'getToken.rb'
 
 def restCall(server,endpoint,l,type)
