@@ -1,12 +1,11 @@
-#$LOAD_PATH.unshift File.expand_path('./', __FILE__)
-require 'getFromApi.rb'
+require 'restCall.rb'
 
 # Grab Requested [item] from hash and return ony that value
 
 def findVmItemByName(t, item)
   t = t.upcase
   begin
-    h = getFromApi('rubrik','/api/v1/vmware/vm?is_relic=false&name='+t)
+    h = restCall('rubrik','/api/v1/vmware/vm?is_relic=false&name='+t,'','get')
     h['data'].each do |v|
       if v['name'].upcase == t
         return v[item]
@@ -20,7 +19,7 @@ end
 
 def findVmItemById(t, item)
   begin
-    h = getFromApi('rubrik',"/api/v1/vmware/vm/#{t}")
+    h = restCall('rubrik',"/api/v1/vmware/vm/#{t}",'','get')
     return h[item]
   rescue StandardError => e
     return false
@@ -29,10 +28,10 @@ end
  
 def getVmdkSize(id)
   begin
-    h = getFromApi('rubrik',"/api/v1/vmware/vm/#{id}")
+    h = restCall('rubrik',"/api/v1/vmware/vm/#{id}",'','get')
     sa = []
     h['virtualDiskIds'].each do |d|
-      sa << getFromApi('rubrik',"/api/v1/vmware/vm/virtual_disk/#{d}")['size'] 
+      sa << restCall('rubrik',"/api/v1/vmware/vm/virtual_disk/#{d}",'','get')['size'] 
     end
     return sa.inject(:+)
   rescue StandardError => e

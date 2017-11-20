@@ -11,17 +11,17 @@ class MigrateVM
     logme("#{vmobj['VMName']}","Begin Workflow","#{self.current_actor}")
 
 # Get vCenters incase we need to refresh them on Rubrik
-    vcenter_info = getFromApi('/api/v1/vmware/vcenter')['data']
+    vcenter_info = restCall('rubrik','/api/v1/vmware/vcenter','','get')['data']
     vcenter_ids = {}
     vcenter_info.each do |v|
       vcenter_ids[v['name']] = v['id']
     end
 
-    refresh_vcenter = JSON.parse(setToApi('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['fromVCenter']] + '/refresh','',"post"))['id']
-    refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+    refresh_vcenter = JSON.parse(restCall('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['fromVCenter']] + '/refresh','',"post"))['id']
+    refresh_status = restCall('rubrik','/api/v1/vmware/vcenter/request/' + refresh_vcenter,'','get')['status']
     last_refresh_status = refresh_status
     while refresh_status != "SUCCEEDED"
-      refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+      refresh_status = restCall('rubrik','/api/v1/vmware/vcenter/request/' + refresh_vcenter,'','get')['status']
       if refresh_status != last_refresh_status
         logme("#{vmobj['VMName']}","Updating VCenter Data",refresh_status.capitalize)
         sleep 10
@@ -46,12 +46,12 @@ class MigrateVM
     id=findVmItemByName(vmobj['VMName'],'id')
     effectiveSla = Sla_hash[findVmItemByName(vmobj['VMName'], 'effectiveSlaDomainId')]
     logme("#{vmobj['VMName']}","Request Snapshot",id)
-    snapshot_job = JSON.parse(setToApi('rubrik','/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
+    snapshot_job = JSON.parse(restCall('rubrik','/api/v1/vmware/vm/' + id + '/snapshot','',"post"))['id']
     logme("#{vmobj['VMName']}","Monitor Snapshot Request",snapshot_job)
     snapshot_status = ''
     last_snapshot_status = ''
     while snapshot_status != "SUCCEEDED"
-      snapshot_status = getFromApi('/api/v1/vmware/vm/request/' + snapshot_job)['status']
+      snapshot_status = restCall('rubrik','/api/v1/vmware/vm/request/' + snapshot_job,'','get')['status']
       if snapshot_status != last_snapshot_status
         logme("#{vmobj['VMName']}","Monitor Snapshot",snapshot_status.capitalize)
         sleep 30
@@ -62,7 +62,7 @@ class MigrateVM
 
 
 # Retrieve the latest snaphot it Instant Recover
-    h=getFromApi("/api/v1/vmware/vm/#{id}/snapshot")
+    h=restCall('rubrik',"/api/v1/vmware/vm/#{id}/snapshot",'','get')
     latestSnapshot =  h['data'][0]['id']
     logme("#{vmobj['VMName']}","Get Snapshot ID",latestSnapshot)
 
@@ -83,12 +83,12 @@ class MigrateVM
 
 # Instant Recover the VM
     logme("#{vmobj['VMName']}","Request Instant Recovery",id)
-    recovery_job = JSON.parse(setToApi('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}"},"post"))['id']
+    recovery_job = JSON.parse(restCall('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{vmobj['VMName']}","hostId" => "#{myh}"},"post"))['id']
     logme("#{vmobj['VMName']}","Instant Recovery Request",recovery_job)
     recovery_status = ''
     last_recovery_status = ''
     while recovery_status != "SUCCEEDED"
-      recovery_status = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['status']
+      recovery_status = restCall('rubrik','/api/v1/vmware/vm/request/' + recovery_job,'','get')['status']
       if recovery_status != last_recovery_status
         logme("#{vmobj['VMName']}","Monitor Recovery",recovery_status.capitalize)
         sleep 10
@@ -110,7 +110,7 @@ class MigrateVM
     vMotion(Creds["toVCenter"],vmobj)
 
 # Remove Instant Recover from Rubrik
-#    recovery_result = getFromApi('/api/v1/vmware/vm/request/' + recovery_job)['links']
+#    recovery_result = restCall('rubrik','/api/v1/vmware/vm/request/' + recovery_job,'','get')['links']
 #    recovery_result.each do |r|
 #      mount = nil
 #      if r['rel'] == "result"
@@ -120,15 +120,15 @@ class MigrateVM
 #      end
 #      begin
 #        logme("#{vmobj['VMName']}","Remove Live Mount","Started")
-#        setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
+#        restCall('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true")
 #      rescue StandardError=>e
 #        puts e
 #      end
-#      #remove_job = JSON.parse(setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
+#      #remove_job = JSON.parse(restCall('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount[0]}?force=true",'',"delete"))['id']
 #    #  logme("#{vmobj['VMName']}","Remove Mount Requested",remove_job)
 #    #  remove_status = ''
 #    #  last_remove_status = ''
-#    #    remove_status = getFromApi('/api/v1/vmware/vm/request/' + remove_job)['status']
+#    #    remove_status = restCall('rubrik','/api/v1/vmware/vm/request/' + remove_job,'','get')['status']
 #    #      logme("#{vmobj['VMName']}","Monitor Remove",remove_status.capitalize)
 #    #      sleep 10
 #    #    end
@@ -138,11 +138,11 @@ class MigrateVM
 #    end
 
 # Refresh the vcenter
-    refresh_vcenter = JSON.parse(setToApi('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
-    refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+    refresh_vcenter = JSON.parse(restCall('rubrik','/api/v1/vmware/vcenter/' + vcenter_ids[vmobj['toVCenter']] + '/refresh','',"post"))['id']
+    refresh_status = restCall('rubrik','/api/v1/vmware/vcenter/request/' + refresh_vcenter,'','get')['status']
     last_refresh_status = refresh_status
     while refresh_status != "SUCCEEDED"
-      refresh_status = getFromApi('/api/v1/vmware/vcenter/request/' + refresh_vcenter)['status']
+      refresh_status = restCall('rubrik','/api/v1/vmware/vcenter/request/' + refresh_vcenter,'','get')['status']
       if refresh_status != last_refresh_status
         logme("#{vmobj['VMName']}","Updating VCenter Data",refresh_status.capitalize)
         sleep 10

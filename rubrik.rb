@@ -2,9 +2,10 @@ $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
 require 'parseoptions.rb'
 require 'pp'
 require 'getCreds.rb'
-require 'getFromApi.rb'
+require 'restCall.rb'
 require 'json'
 require 'csv'
+require 'uri'
 require 'getVm.rb'
 
 class Hash
@@ -15,14 +16,13 @@ end
 
 def livemount (vmids)
   require 'getSlaHash.rb'
-  require 'setToApi.rb'
   sla_hash = getSlaHash()
   if Options.unmount
     puts "Checking and Requesting #{vmids.count} Unmounts"
-    (getFromApi('rubrik',"/api/v1/vmware/vm/snapshot/mount"))['data'].each do |mount|
+    (restCall('rubrik',"/api/v1/vmware/vm/snapshot/mount",'','get'))['data'].each do |mount|
       if (vmids.include? mount['vmId']) && mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
-        setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount['id']}",'',"delete")
+        restCall('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount['id']}",'',"delete")
       elsif (vmids.include? mount['vmId']) && !mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
       end
@@ -31,13 +31,13 @@ def livemount (vmids)
   if Options.livemount
     puts "Requesting #{vmids.count} Live Mounts"
     vmids.each_with_index do |vm,num|
-      vmd = getFromApi('rubrik',"/api/v1/vmware/vm/#{vm}")
+      vmd = restCall('rubrik',"/api/v1/vmware/vm/#{vm}",'','get')
       if vmd['snapshots'].empty?
         puts "#{num+1}: Requesting Livemount - #{vmd['name']} (Denied - No Snapshots)"
         next
       end
       puts "#{num+1}: Requesting Livemount - #{vmd['name']} (#{vmd['snapshots'].last['date']})"
-      setToApi('rubrik',"/api/v1/vmware/vm/snapshot/#{vmd['snapshots'].last['id']}/mount",'',"post")
+      restCall('rubrik',"/api/v1/vmware/vm/snapshot/#{vmd['snapshots'].last['id']}/mount",'',"post")
     end
   end
 end
@@ -48,10 +48,10 @@ def odb (vmids)
   puts "Requesting #{vmids.count} Snapshots"
   vmids.each_with_index do |vm,num|
     if Options.assure 
-      o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post"))['status']
+      o = (restCall('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post"))['status']
       print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     else
-      o = (setToApi('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
+      o = (restCall('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
       print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     end
     STDOUT.flush
@@ -98,11 +98,9 @@ end
 # Grab the SLAHash to make pretty names
 if Options.file then
   if Options.assure then
-    require 'getVm.rb'
-    require 'uri'
     ss = URI.encode(Options.assure.to_s)
     managedId=findVmItemByName(Options.vm,'managedId')
-    h=getFromApi('rubrik',"/api/v1/search?managed_id=#{managedId}&query_string=#{ss}")
+    h=restCall('rubrik',"/api/v1/search?managed_id=#{managedId}&query_string=#{ss}",'','get')
     h['data'].each do |s|
       puts s['path']
     end
@@ -110,22 +108,21 @@ if Options.file then
 end
 
 if Options.fsbackup
-  templates = getFromApi('rubrik',"/api/v1/fileset_template")
-  filesets = getFromApi('rubrik',"/api/v1/fileset")
+  templates = restCall('rubrik',"/api/v1/fileset_template",'','get')
+  filesets = restCall('rubrik',"/api/v1/fileset",'','get')
   File.open(Logtime.to_s + "_templates.json", 'a') { |f| PP.pp(templates,f) }
   File.open(Logtime.to_s + "_filesets.json", 'a') { |f| PP.pp(filesets,f) }
 end
 
 if Options.split && Options.infile && Options.sharename && Options.sharetype
-  require 'setToApi.rb'
   require 'getSlaHash.rb'
   sla_hash = getSlaHash()
-  host = getFromApi('rubrik',"/api/v1/host?hostname=#{URI::encode(Options.hostname)}")
+  host = restCall('rubrik',"/api/v1/host?hostname=#{URI::encode(Options.hostname)}",'','get')
   if host['total'] == 0
     puts "#{Options.hostname} is not configured on Rubrik"
   else
     hostId = host['data'][0]['id']
-    shares = getFromApi('rubrik',"/api/internal/host_fileset/share?hostname=#{URI::encode(Options.hostname)}&share_type=#{URI::encode(Options.sharetype)}")
+    shares = restCall('rubrik',"/api/internal/host_fileset/share?hostname=#{URI::encode(Options.hostname)}&share_type=#{URI::encode(Options.sharetype)}",'','get')
     if shares['total'] == 0
       puts "No shares configured for #{Options.hostname}"
       exit
@@ -182,21 +179,21 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
 #          path = "#{path}**"
 #          op = "No Fileset Operation"
 #          if Options.filesetgen && Options.sharename
-#            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
+#            if (restCall('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}",'','get'))['total'] > 0
 #              op = "Fileset Exists"
 #            else
 #              op = "Created Fileset"
-#              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
+#              o = restCall('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
 #            end
-#            templateId = getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}")['data'][0]['id']
+#            templateId = restCall('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}",'','get')['data'][0]['id']
 #            association = ''
-#            association = getFromApi('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}")['total']
+#            association = restCall('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}",'','get')['total']
 #            if association == 0  
 #              op2="Create Association"
-#              o = setToApi('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
+#              o = restCall('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
 #              if Options.assure
 #                slaId = sla_hash.invert[Options.assure]
-#                c = setToApi('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
+#                c = restCall('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
 #              end
 #            else
 #              op2="Association Exists"
@@ -205,7 +202,7 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
 #          puts "#{depth} | #{count} | #{size} | #{path} | #{op} | #{op2}"
 #        end
   if Options.filesetgen && Options.sharename
-    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => "**", "excludes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
+    o = restCall('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => "**", "excludes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
   end
   exit
 end
@@ -213,14 +210,14 @@ end
 if Options.fsreport 
   puts ('"Share Name","Fileset Name","Snapshot Count","Last Snapshot Date","File Count","Size"')
   shares = {}
-  getFromApi('rubrik',"/api/internal/host/share")['data'].each do |sh|
+  restCall('rubrik',"/api/internal/host/share",'','get')['data'].each do |sh|
     shares[sh['id']] = sh['exportPoint']
   end
-  getFromApi('rubrik',"/api/v1/fileset")['data'].each do |fs|
+  restCall('rubrik',"/api/v1/fileset",'','get')['data'].each do |fs|
     size=0
-    fileset = getFromApi('rubrik',"/api/v1/fileset/#{fs['id']}")
+    fileset = restCall('rubrik',"/api/v1/fileset/#{fs['id']}",'','get')
     next if fileset['configuredSlaDomainName'] != "Milbank NAS Backup SLA"
-    getFromApi('rubrik',"/api/v1/fileset/snapshot/#{fileset['snapshots'].last['id']}/browse?path=%2F")['data'].each do |mysize|
+    restCall('rubrik',"/api/v1/fileset/snapshot/#{fileset['snapshots'].last['id']}/browse?path=%2F",'','get')['data'].each do |mysize|
       size += mysize['size']
     end
     #date = fileset['snapshots'].last['date'].gsub(/^(.*)T(.*)Z$/, '\1 \2')
@@ -232,28 +229,28 @@ end
 
 if Options.metric then
   if Options.storage then
-    h=getFromApi('rubrik',"/api/internal/stats/system_storage")
+    h=restCall('rubrik',"/api/internal/stats/system_storage",'','get')
   end
   if Options.iostat then
-    h=getFromApi('rubrik',"/api/internal/cluster/me/io_stats?range=-#{Options.iostat}")
+    h=restCall('rubrik',"/api/internal/cluster/me/io_stats?range=-#{Options.iostat}",'','get')
   end
   if Options.archivebw then
-    h=getFromApi('rubrik',"/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}")
+    h=restCall('rubrik',"/api/internal/stats/archival/bandwidth/time_series?range=-#{Options.archivebw}",'','get')
   end
   if Options.snapshotingest then
-    h=getFromApi('rubrik',"/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}")
+    h=restCall('rubrik',"/api/internal/stats/snapshot_ingest/time_series?range=-#{Options.snapshotingest}",'','get')
   end
   if Options.localingest then
-    h=getFromApi('rubrik',"/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}")
+    h=restCall('rubrik',"/api/internal/stats/local_ingest/time_series?range=-#{Options.localingest}",'','get')
   end
   if Options.physicalingest then
-    h=getFromApi('rubrik',"/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}")
+    h=restCall('rubrik',"/api/internal/stats/physical_ingest/time_series?range=-#{Options.physicalingest}",'','get')
   end
   if Options.runway then
-    h=getFromApi('rubrik',"/api/internal/stats/runway_remaining")
+    h=restCall('rubrik',"/api/internal/stats/runway_remaining",'','get')
   end
   if Options.incomingsnaps then
-    h=getFromApi('rubrik',"/api/internal/stats/streams/count")
+    h=restCall('rubrik',"/api/internal/stats/streams/count",'','get')
   end
   if Options.blah then
     puts JSON.pretty_generate(h)
@@ -267,20 +264,20 @@ if Options.metric then
 end
 
 if Options.vmusage then
-  vcenters=getFromApi('rubrik',"/api/v1/vmware/vcenter")['data']
+  vcenters=restCall('rubrik',"/api/v1/vmware/vcenter",'','get')['data']
   VmwareVCenters = {}     
   vcenters.each do |vcenter|       
     VmwareVCenters[vcenter['id']] = vcenter['hostname']     
   end
-  vdatacenters=getFromApi('rubrik',"/api/internal/vmware/data_center")['data']     
+  vdatacenters=restCall('rubrik',"/api/internal/vmware/data_center",'','get')['data']     
   VmwareDatacenters = {}     
   vdatacenters.each do |datacenter|       
     VmwareVCenters[datacenter['id']] = datacenter['name']     
   end
-  s=getFromApi('rubrik',"/api/internal/stats/per_vm_storage")['data'] 
+  s=restCall('rubrik',"/api/internal/stats/per_vm_storage",'','get')['data'] 
   s.each do |r|
     if r['id'].include? "-vm-" then
-      vmr=getFromApi('rubrik',"/api/v1/vmware/vm/VirtualMachine:::#{r['id']}")
+      vmr=restCall('rubrik',"/api/v1/vmware/vm/VirtualMachine:::#{r['id']}",'','get')
       r['vmname']=vmr['name']
       r['vcenter']=VmwareVCenters[vmr['vcenterId']]
       r['datacenter']=VmwareVCenters[vmr['currentHost']['datacenterId']]
@@ -315,17 +312,17 @@ end
 
 
 if Options.envision then
-  h=getFromApi('rubrik',"/api/internal/report?search_text=#{Options.envision}")
+  h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
   h['data'].each do |r|
     if r['name'] == Options.envision then
-      o=getFromApi('rubrik',"/api/internal/report/#{r['id']}/table")
+      o=restCall('rubrik',"/api/internal/report/#{r['id']}/table",'','get')
       hdr = o['columns']
       if !Options.outfile then 
         puts hdr.to_csv
       end
       o['dataGrid'].each do |e|
         if Options.tag then
-          vmr=getFromApi('rubrik',"/api/v1/vmware/vm/#{x['ObjectId']}")
+          vmr=restCall('rubrik',"/api/v1/vmware/vm/#{x['ObjectId']}",'','get')
           puts vmr['moid']
         end
         if Options.outfile then
@@ -345,66 +342,56 @@ end
 
 
 if Options.dr then
-    require 'getVm.rb'
-    require 'uri'
-    require 'json'
-    require 'setToApi.rb'
     #Get Cluster ID
-    clusterInfo=getFromApi("/api/v1/cluster/me")
+    clusterInfo=restCall('rubrik',"/api/v1/cluster/me",'','get')
     id=findVmItemByName(Options.vm,'id')
     #Get Latest Snapshot
-    h=getFromApi('rubrik',"/api/v1/vmware/vm/#{id}/snapshot")
+    h=restCall('rubrik',"/api/v1/vmware/vm/#{id}/snapshot",'','get')
     latestSnapshot =  h['data'][0]['id']
     #Get vmWare Hosts for the Cluster
     hostList = Array.new
-    o = setToApi('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
+    o = restCall('rubrik','/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover',{ "vmName" => "#{Options.vm}","hostId" => "#{hostList[0]}","removeNetworkDevices" => true},"post")
     puts '/api/v1/vmware/vm/snapshot/' + latestSnapshot + '/instant_recover'
 end
 
 if Options.drcsv then
-    require 'CSV'
     require 'getSlaHash.rb'
-    require 'getFromApi.rb'
-    require 'getVm.rb'
-    require 'uri'
-    require 'json'
-    require 'setToApi.rb'
     require 'vmOperations.rb'
     require 'migrateVM.rb'
     logme("BEGIN","BEGIN",Begintime.to_s)
     logme("Core","Assembling Base Hashes","Started")
   #  (@token,@rubrikhost) = get_token()
-    datastores=getFromApi('rubrik',"/api/internal/vmware/datastore")['data']
+    datastores=restCall('rubrik',"/api/internal/vmware/datastore",'','get')['data']
     logme("Core","Assembling Base Hashes","Infrastructure")
     VmwareDatastores = {}
     datastores.each do |datastore|
       VmwareDatastores[datastore['name']] = datastore['id']
     end
-    vcenters=getFromApi('rubrik',"/api/v1/vmware/vcenter")['data']
+    vcenters=restCall('rubrik',"/api/v1/vmware/vcenter",'','get')['data']
     VmwareVCenters = {}
     vcenters.each do |vcenter|
       VmwareVCenters[vcenter['id']] = vcenter['hostname']
     end
-    vdatacenters=getFromApi('rubrik',"/api/internal/vmware/data_center")['data']
+    vdatacenters=restCall('rubrik',"/api/internal/vmware/data_center",'','get')['data']
     VmwareDatacenters = {}
     vdatacenters.each do |datacenter|
       VmwareVCenters[datacenter['id']] = datacenter['name']
     end
-    clusters=getFromApi('rubrik',"/api/internal/vmware/compute_cluster")['data']
+    clusters=restCall('rubrik',"/api/internal/vmware/compute_cluster",'','get')['data']
     VmwareClusters = {}
     clusters.each do |cluster|
       VmwareClusters[cluster['id']] = cluster['name']
     end
-    hosts=getFromApi('rubrik',"/api/v1/vmware/host")['data']
+    hosts=restCall('rubrik',"/api/v1/vmware/host",'','get')['data']
     temphosts = Hash.nest
     hosts.each do |host|
-      hd=getFromApi('rubrik',"/api/v1/vmware/host/#{host['id']}")
+      hd=restCall('rubrik',"/api/v1/vmware/host/#{host['id']}",'','get')
       temphosts[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']]#[VmwareClusters[hd['computeClusterId']]]
     end
     Infrastructure = temphosts
     hosts.each do |host|
       VmwareHosts[host['id']] = host['name']
-      hd=getFromApi('rubrik',"/api/v1/vmware/host/#{host['id']}")
+      hd=restCall('rubrik',"/api/v1/vmware/host/#{host['id']}",'','get')
       if Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]].empty?
         Infrastructure[VmwareVCenters[hd['datacenter']['vcenterId']]][hd['datacenter']['name']][VmwareClusters[hd['computeClusterId']]] = []
       end
@@ -425,7 +412,7 @@ if Options.drcsv then
 end
 
 if Options.odb then
-  require 'setToApi.rb'
+  require 'restCall.rb'
   vmids = []
   if Options.vm then
     vmids << findVmItemByName(Options.vm, 'id')
@@ -440,7 +427,7 @@ end
 
 if Options.isilon
   require 'securerandom'
-  require 'setToApi.rb'
+  require 'restCall.rb'
   b = Time.now.to_f 
   isi_path=Options.isilon
   isi_snap_prefix="Rubrik_"
@@ -452,7 +439,7 @@ if Options.isilon
   isi_last_snap_call = "/platform/1/snapshot/snapshots?type=real&dir=DESC"
   isi_last_snap_method = "get"
   puts "Getting last Rubrik_ snap info - \n\t#{isi_last_snap_method} \n\t#{isi_last_snap_call}"
-  getFromApi('isilon',isi_last_snap_call)['snapshots'].each do |g|
+  restCall('isilon',isi_last_snap_call,'','get')['snapshots'].each do |g|
     if g['name'] =~ /^#{isi_snap_prefix}/ && g['path'] == isi_path
       pp g
       isi_last_snap=g
@@ -473,7 +460,7 @@ if Options.isilon
   isi_new_snap_method = "post"
   isi_new_snap_payload = {"path" => "#{isi_path}", "name" => "#{isi_snap_name}"}
   print "Creating checkpoint Rubrik_ snap - \n\t#{isi_new_snap_method} \n\t#{isi_new_snap_call} \n\t#{isi_new_snap_payload} "
-  isi_new_snap = setToApi('isilon',isi_new_snap_call,isi_new_snap_payload,isi_new_snap_method)
+  isi_new_snap = restCall('isilon',isi_new_snap_call,isi_new_snap_payload,isi_new_snap_method)
   tm['CreateNewSnap'] = (Time.now.to_f - tm['Begin']).round(3)
   puts "\n\tResults -  #{isi_new_snap['name']} (#{isi_new_snap['id']}) (#{tm['CreateNewSnap']})"
   if isi_last_snap.empty?
@@ -485,7 +472,7 @@ if Options.isilon
   isi_new_changelist_method = "post"
   isi_new_changelist_payload = { "type" => "changelistcreate", "changelistcreate_params" => {"older_snapid" => isi_last_snap['id'].to_i, "newer_snapid" => isi_new_snap['id'].to_i, "retain_repstate" => true}}
   puts "Create Changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_new_changelist_method} \n\t#{isi_new_changelist_call} \n\t#{isi_new_changelist_payload}"
-  changelist_job_id = setToApi('isilon',isi_new_changelist_call,isi_new_changelist_payload,isi_new_changelist_method)['id']
+  changelist_job_id = restCall('isilon',isi_new_changelist_call,isi_new_changelist_payload,isi_new_changelist_method)['id']
 
   # Monitor the changelist job
   tm['CreateChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
@@ -493,7 +480,7 @@ if Options.isilon
   isi_monitor_changelist_call = "/platform/1/job/jobs/#{changelist_job_id}"
   isi_monitor_changelist_method = "get"
   puts "Monitor changelist job  #{isi_last_snap['name']} to #{isi_new_snap['name']} (#{tm['CreateChangeList']})\n\t#{isi_monitor_changelist_method}\n\t#{isi_monitor_changelist_call}"
-  while test = getFromApi('isilon',isi_monitor_changelist_call)['jobs'][0]
+  while test = restCall('isilon',isi_monitor_changelist_call,'','get')['jobs'][0]
     if test['state'] != last_state
       print test['state'].capitalize 
       if test['state'] == 'succeeded'
@@ -509,7 +496,7 @@ if Options.isilon
   puts "Changelist Job Complete (#{tm['MonitorChangeListJob']})"
   
   # Delete Older Snap
-  #setToApi('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
+  #restCall('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
  
 
   # Here we grab the changes
@@ -524,7 +511,7 @@ if Options.isilon
     isi_dump_changelist_call = "/platform/1/snapshot/changelists/#{isi_last_snap['id']}_#{isi_new_snap['id']}/lins#{a}"
     isi_dump_changelist_method = "get"
     puts "Dump changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_dump_changelist_method}\n\t#{isi_dump_changelist_call}"
-    lins=getFromApi('isilon',isi_dump_changelist_call)
+    lins=restCall('isilon',isi_dump_changelist_call,'','get')
     unless tm['ObjectsReturned'] 
       tm['ObjectsReturned'] = 0
     end
@@ -540,12 +527,11 @@ end
 
 if (Options.sla || Options.sla.nil?) && !Options.split then
   require 'getSlaHash.rb'
-  require 'getFromApi.rb'
-  require 'getVm.rb'
+  require 'restCall.rb'
   sla_hash = getSlaHash()
   vmids=[]
   if (Options.livemount || Options.unmount) && !Options.infile
-    (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
+    (restCall('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local",'','get')['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
         vmids << vm['id']
       end
@@ -554,7 +540,7 @@ if (Options.sla || Options.sla.nil?) && !Options.split then
     exit
   end
   if Options.odb && !Options.infile
-    (getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']).each do |vm|
+    (restCall('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local",'','get')['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
         puts "#{vm['name']}"
         vmids << vm['id']
@@ -568,11 +554,11 @@ if (Options.sla || Options.sla.nil?) && !Options.split then
     exit
   end
   if Options.list then
-    (getFromApi('rubrik',"/api/v1/vmware/vm?limit=9999"))['data'].each do |s|
+    (restCall('rubrik',"/api/v1/vmware/vm?limit=9999",'','get'))['data'].each do |s|
       if s['effectiveSlaDomainId'] == 'UNPROTECTED' then
         puts s['name'] + ", " + s['effectiveSlaDomainName'] + ", " + s['effectiveSlaDomainId'] + ", " + s['primaryClusterId']
       else
-        if s['primaryClusterId'] == (getFromApi('rubrik',"/api/v1/sla_domain/#{s['effectiveSlaDomainId']}"))['primaryClusterId'] 
+        if s['primaryClusterId'] == (restCall('rubrik',"/api/v1/sla_domain/#{s['effectiveSlaDomainId']}",'','get'))['primaryClusterId'] 
           result = "Proper SLA Assignment"
         else
           result = "Check SLA Assignemnt!"
@@ -591,7 +577,7 @@ if (Options.sla || Options.sla.nil?) && !Options.split then
   if Options.os || Options.sr
     # See if tools is installed on the VM and add to array
     puts "Qualifying SLA Membership"
-    vms = getFromApi('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local")['data']
+    vms = restCall('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local",'','get')['data']
     puts "Checking Tools on #{vms.count} VMs"
     vms.each do |vm|
       if vm['toolsInstalled']
