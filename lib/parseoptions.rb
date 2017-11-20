@@ -148,6 +148,12 @@ class ParseOptions
     opts.on('--isilon [string]', "Experimental - Working with Isilon") do |g|
       options[:isilon] = g;
     end
+    opts.on('--statfiles [int]', "Experimental - File Count") do |g|
+      options[:statfiles] = g;
+    end
+    opts.on('--statdirs [int]', "Experimental - Directory Count") do |g|
+      options[:statdirs] = g;
+    end
     opts.separator ""
     opts.separator "Common options:"
     opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|

@@ -515,6 +515,8 @@ if Options.isilon
       tm['ObjectsReturned'] = 0
     end
     tm['ObjectsReturned'] += lins['total']
+    tm['ObjectsTotal'] = Options.statfiles if Options.statfiles 
+    tm['DirectoriesTotal'] = Options.statdirs if Options.statdirs 
     tm['Resumable'] = lins['resume']
     iter = lins['resume']
   end
