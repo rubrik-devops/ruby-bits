@@ -1,8 +1,8 @@
 {
 	"rubrik": {
-        	"servers": ["172.21.8.51","172.21.8.52"],
-        	"username": "lunswingtest",
-        	"password": "lunswingtest"
+        	"servers": ["FQDN","FQDN"],
+		"username": "",
+        	"password": ""
 	},
          "toVCenter": {
 		"server": "FQDN",

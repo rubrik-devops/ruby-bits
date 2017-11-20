@@ -438,6 +438,105 @@ if Options.odb then
   end
 end
 
+if Options.isilon
+  require 'securerandom'
+  require 'setToApi.rb'
+  b = Time.now.to_f 
+  isi_path=Options.isilon
+  isi_snap_prefix="Rubrik_"
+  tm = {}
+  tm['Begin'] = Time.now.to_f
+  puts "Begin (#{tm['Begin']})" 
+  # Get the last Rubrik_ snapshot on the isilon
+  isi_last_snap={}
+  isi_last_snap_call = "/platform/1/snapshot/snapshots?type=real&dir=DESC"
+  isi_last_snap_method = "get"
+  puts "Getting last Rubrik_ snap info - \n\t#{isi_last_snap_method} \n\t#{isi_last_snap_call}"
+  getFromApi('isilon',isi_last_snap_call)['snapshots'].each do |g|
+    if g['name'] =~ /^#{isi_snap_prefix}/ && g['path'] == isi_path
+      pp g
+      isi_last_snap=g
+      break
+    end
+  end
+  if isi_last_snap.empty?
+    puts "\tResults - No Checkpoint found for #{Options.isilon}, will create now"
+  else
+    tm['GetLastSnap'] = (Time.now.to_f - tm['Begin']).round(3)
+    puts "\tResults - #{isi_last_snap['name']} (#{isi_last_snap['id']}) (#{tm['GetLastSnap']})"
+  end
+
+  # Create a New Snapshot to create changelist
+  isi_path=Options.isilon
+  isi_snap_name="Rubrik_"+SecureRandom.uuid
+  isi_new_snap_call = "/platform/1/snapshot/snapshots"
+  isi_new_snap_method = "post"
+  isi_new_snap_payload = {"path" => "#{isi_path}", "name" => "#{isi_snap_name}"}
+  print "Creating checkpoint Rubrik_ snap - \n\t#{isi_new_snap_method} \n\t#{isi_new_snap_call} \n\t#{isi_new_snap_payload} "
+  isi_new_snap = setToApi('isilon',isi_new_snap_call,isi_new_snap_payload,isi_new_snap_method)
+  tm['CreateNewSnap'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "\n\tResults -  #{isi_new_snap['name']} (#{isi_new_snap['id']}) (#{tm['CreateNewSnap']})"
+  if isi_last_snap.empty?
+    puts "Complete - Full file scan must be done to continue this backup"
+    exit
+  end
+  # Create the changelist job to compare the new snapshot with the last one
+  isi_new_changelist_call = "/platform/3/job/jobs"
+  isi_new_changelist_method = "post"
+  isi_new_changelist_payload = { "type" => "changelistcreate", "changelistcreate_params" => {"older_snapid" => isi_last_snap['id'].to_i, "newer_snapid" => isi_new_snap['id'].to_i, "retain_repstate" => true}}
+  puts "Create Changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_new_changelist_method} \n\t#{isi_new_changelist_call} \n\t#{isi_new_changelist_payload}"
+  changelist_job_id = setToApi('isilon',isi_new_changelist_call,isi_new_changelist_payload,isi_new_changelist_method)['id']
+
+  # Monitor the changelist job
+  tm['CreateChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
+  last_state = ''
+  isi_monitor_changelist_call = "/platform/1/job/jobs/#{changelist_job_id}"
+  isi_monitor_changelist_method = "get"
+  puts "Monitor changelist job  #{isi_last_snap['name']} to #{isi_new_snap['name']} (#{tm['CreateChangeList']})\n\t#{isi_monitor_changelist_method}\n\t#{isi_monitor_changelist_call}"
+  while test = getFromApi('isilon',isi_monitor_changelist_call)['jobs'][0]
+    if test['state'] != last_state
+      print test['state'].capitalize 
+      if test['state'] == 'succeeded'
+        puts
+        break
+      end
+      last_state = test['state']
+    else 
+      print '.'
+    end 
+  end
+  tm['MonitorChangeListJob'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "Changelist Job Complete (#{tm['MonitorChangeListJob']})"
+  
+  # Delete Older Snap
+  #setToApi('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
+ 
+
+  # Here we grab the changes
+  iter = 1
+  tm['Pages']=1
+  until !iter
+    a= ''
+    if iter != 1  
+      a= "?resume=#{iter}"
+      tm['Pages'] += 1
+    end
+    isi_dump_changelist_call = "/platform/1/snapshot/changelists/#{isi_last_snap['id']}_#{isi_new_snap['id']}/lins#{a}"
+    isi_dump_changelist_method = "get"
+    puts "Dump changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_dump_changelist_method}\n\t#{isi_dump_changelist_call}"
+    lins=getFromApi('isilon',isi_dump_changelist_call)
+    unless tm['ObjectsReturned'] 
+      tm['ObjectsReturned'] = 0
+    end
+    tm['ObjectsReturned'] += lins['total']
+    tm['Resumable'] = lins['resume']
+    iter = lins['resume']
+  end
+  tm['DumpChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
+  pp tm
+  exit
+end
 
 if (Options.sla || Options.sla.nil?) && !Options.split then
   require 'getSlaHash.rb'

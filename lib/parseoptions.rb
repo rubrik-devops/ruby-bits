@@ -145,6 +145,9 @@ class ParseOptions
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
+    opts.on('--isilon [string]', "Experimental - Working with Isilon") do |g|
+      options[:isilon] = g;
+    end
     opts.separator ""
     opts.separator "Common options:"
     opts.on('-n', '--node [Address]', "Rubrik Cluster Address/FQDN") do |node|
