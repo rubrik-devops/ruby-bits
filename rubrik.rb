@@ -522,6 +522,7 @@ if Options.isilon
   end
   tm['DumpChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
   puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
+  puts "STATS--------------------------------------------------" 
   pp tm
   exit
 end
