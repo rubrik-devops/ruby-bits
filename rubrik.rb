@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
-require 'parseOptions.rb'
+require 'parseoptions.rb'
 require 'pp'
 require 'getCreds.rb'
 require 'getFromApi.rb'
