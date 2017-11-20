@@ -1,7 +1,7 @@
 {
 	"rubrik": {
         	"servers": ["FQDN","FQDN"],
-        	"username": "",
+		"username": "",
         	"password": ""
 	},
          "toVCenter": {

@@ -18,15 +18,13 @@ def livemount (vmids)
   require 'setToApi.rb'
   sla_hash = getSlaHash()
   if Options.unmount
-    puts "Requesting #{vmids.count} Unmounts"
+    puts "Checking and Requesting #{vmids.count} Unmounts"
     (getFromApi('rubrik',"/api/v1/vmware/vm/snapshot/mount"))['data'].each do |mount|
       if (vmids.include? mount['vmId']) && mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
         setToApi('rubrik',"/api/v1/vmware/vm/snapshot/mount/#{mount['id']}",'',"delete")
       elsif (vmids.include? mount['vmId']) && !mount['isReady']
         puts "Requesting Unmount - (#{findVmItemById(mount['mountedVmId'], 'name')})" 
-        
-
       end
     end
   end
@@ -111,8 +109,128 @@ if Options.file then
   end
 end
 
-if Options.metric then
+if Options.fsbackup
+  templates = getFromApi('rubrik',"/api/v1/fileset_template")
+  filesets = getFromApi('rubrik',"/api/v1/fileset")
+  File.open(Logtime.to_s + "_templates.json", 'a') { |f| PP.pp(templates,f) }
+  File.open(Logtime.to_s + "_filesets.json", 'a') { |f| PP.pp(filesets,f) }
+end
 
+if Options.split && Options.infile && Options.sharename && Options.sharetype
+  require 'setToApi.rb'
+  require 'getSlaHash.rb'
+  sla_hash = getSlaHash()
+  host = getFromApi('rubrik',"/api/v1/host?hostname=#{URI::encode(Options.hostname)}")
+  if host['total'] == 0
+    puts "#{Options.hostname} is not configured on Rubrik"
+  else
+    hostId = host['data'][0]['id']
+    shares = getFromApi('rubrik',"/api/internal/host_fileset/share?hostname=#{URI::encode(Options.hostname)}&share_type=#{URI::encode(Options.sharetype)}")
+    if shares['total'] == 0
+      puts "No shares configured for #{Options.hostname}"
+      exit
+    else
+      shareId=''
+      shares['data'].each do |share|
+        if share['exportPoint'] == Options.sharename
+          shareId = share['id']
+        end
+      end
+      if shareId == ''
+        puts "#{Options.sharename} (#{Options.sharetype}) does not exist on Rubrik for #{Options.hostname}"
+        #exit
+      end
+    end
+  end
+  puts "Configuring filesets for #{Options.hostname} (#{hostId}) - #{Options.sharename} (#{shareId})"
+  depth = 2
+  lines = File.open(Options.infile)
+  path=''
+  par = []
+  dirs = {} 
+  lines.each do |line|
+    if line.include? "Folder fullpath"
+      path=line[/fullpath\=\"(.*?)\"/,1]
+    elsif line.include? "SizeData"
+      count = line[/.*Files\=\"(.*?)\".*/,1]
+      size = (line[/.*Size\=\"(.*?)\".*/,1]).to_f/1073741824
+      if !path.empty?
+        if path.include? "\\"
+          path = (path.gsub(/\\/, "/")) 
+        end
+        path = path.split(Options.sharename)[1]
+        path = "#{path}**"
+        depth = (path.scan(/(?=\/)/).count) 
+        sharepath = "//#{Options.sharename}#{path}"
+        dirs[path] = {}
+        dirs[path]['size'] = size.to_i
+        dirs[path]['sharepath'] = sharepath
+        dirs[path]['count'] = count.to_i
+        dirs[path]['depth'] = depth.to_i
+      end
+    end
+  end
+  dirs.each_key do |d|
+    if ((dirs[d]['count'] > 500000 || dirs[d]['size'] > 2000) && dirs[d]['depth'] < 6) || dirs[d]['depth'] == 1
+      puts "#{dirs[d]['depth']}|#{dirs[d]['count']}|#{dirs[d]['size']}|#{d}"
+    end
+  end
+  exit
+#        if (depth > 1 && depth < 3) && (count.to_i > 200000 || size.to_i > 5000)
+#          next if par.include? path
+#          par << path
+#          path = "#{path}**"
+#          op = "No Fileset Operation"
+#          if Options.filesetgen && Options.sharename
+#            if (getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}"))['total'] > 0
+#              op = "Fileset Exists"
+#            else
+#              op = "Created Fileset"
+#              o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => ["#{path}"],"name" => "#{sharepath}"} ,"post")
+#            end
+#            templateId = getFromApi('rubrik',"/api/v1/fileset_template?name=#{URI::encode(sharepath)}")['data'][0]['id']
+#            association = ''
+#            association = getFromApi('rubrik',"/api/v1/fileset?host_id=#{URI::encode(hostId)}&share_id=#{URI::encode(shareId)}&template_id=#{URI::encode(templateId)}")['total']
+#            if association == 0  
+#              op2="Create Association"
+#              o = setToApi('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
+#              if Options.assure
+#                slaId = sla_hash.invert[Options.assure]
+#                c = setToApi('rubrik',"/api/v1/fileset/#{o}",{ "configuredSlaDomainId" => "#{slaId}"} ,"patch")
+#              end
+#            else
+#              op2="Association Exists"
+#            end
+#          end
+#          puts "#{depth} | #{count} | #{size} | #{path} | #{op} | #{op2}"
+#        end
+  if Options.filesetgen && Options.sharename
+    o = setToApi('rubrik','/api/v1/fileset_template',{ "shareType" => "#{Options.sharetype}", "includes" => "**", "excludes" => par,"name" => "//#{Options.sharename}/CatchAll"} ,"post")
+  end
+  exit
+end
+
+if Options.fsreport 
+  puts ('"Share Name","Fileset Name","Snapshot Count","Last Snapshot Date","File Count","Size"')
+  shares = {}
+  getFromApi('rubrik',"/api/internal/host/share")['data'].each do |sh|
+    shares[sh['id']] = sh['exportPoint']
+  end
+  getFromApi('rubrik',"/api/v1/fileset")['data'].each do |fs|
+    size=0
+    fileset = getFromApi('rubrik',"/api/v1/fileset/#{fs['id']}")
+    next if fileset['configuredSlaDomainName'] != "Milbank NAS Backup SLA"
+    getFromApi('rubrik',"/api/v1/fileset/snapshot/#{fileset['snapshots'].last['id']}/browse?path=%2F")['data'].each do |mysize|
+      size += mysize['size']
+    end
+    #date = fileset['snapshots'].last['date'].gsub(/^(.*)T(.*)Z$/, '\1 \2')
+    puts ("#{shares[fileset['shareId']]},#{fileset['name']},#{fileset['snapshotCount']},#{fileset['snapshots'].last['date'].gsub(/^(.*)T(.*)Z$/, '\1 \2')},#{fileset['snapshots'].last['fileCount']},#{size}")
+  end
+end
+
+  
+
+if Options.metric then
   if Options.storage then
     h=getFromApi('rubrik',"/api/internal/stats/system_storage")
   end
@@ -320,8 +438,107 @@ if Options.odb then
   end
 end
 
+if Options.isilon
+  require 'securerandom'
+  require 'setToApi.rb'
+  b = Time.now.to_f 
+  isi_path=Options.isilon
+  isi_snap_prefix="Rubrik_"
+  tm = {}
+  tm['Begin'] = Time.now.to_f
+  puts "Begin (#{tm['Begin']})" 
+  # Get the last Rubrik_ snapshot on the isilon
+  isi_last_snap={}
+  isi_last_snap_call = "/platform/1/snapshot/snapshots?type=real&dir=DESC"
+  isi_last_snap_method = "get"
+  puts "Getting last Rubrik_ snap info - \n\t#{isi_last_snap_method} \n\t#{isi_last_snap_call}"
+  getFromApi('isilon',isi_last_snap_call)['snapshots'].each do |g|
+    if g['name'] =~ /^#{isi_snap_prefix}/ && g['path'] == isi_path
+      pp g
+      isi_last_snap=g
+      break
+    end
+  end
+  if isi_last_snap.empty?
+    puts "\tResults - No Checkpoint found for #{Options.isilon}, will create now"
+  else
+    tm['GetLastSnap'] = (Time.now.to_f - tm['Begin']).round(3)
+    puts "\tResults - #{isi_last_snap['name']} (#{isi_last_snap['id']}) (#{tm['GetLastSnap']})"
+  end
 
-if Options.sla || Options.sla.nil? then
+  # Create a New Snapshot to create changelist
+  isi_path=Options.isilon
+  isi_snap_name="Rubrik_"+SecureRandom.uuid
+  isi_new_snap_call = "/platform/1/snapshot/snapshots"
+  isi_new_snap_method = "post"
+  isi_new_snap_payload = {"path" => "#{isi_path}", "name" => "#{isi_snap_name}"}
+  print "Creating checkpoint Rubrik_ snap - \n\t#{isi_new_snap_method} \n\t#{isi_new_snap_call} \n\t#{isi_new_snap_payload} "
+  isi_new_snap = setToApi('isilon',isi_new_snap_call,isi_new_snap_payload,isi_new_snap_method)
+  tm['CreateNewSnap'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "\n\tResults -  #{isi_new_snap['name']} (#{isi_new_snap['id']}) (#{tm['CreateNewSnap']})"
+  if isi_last_snap.empty?
+    puts "Complete - Full file scan must be done to continue this backup"
+    exit
+  end
+  # Create the changelist job to compare the new snapshot with the last one
+  isi_new_changelist_call = "/platform/3/job/jobs"
+  isi_new_changelist_method = "post"
+  isi_new_changelist_payload = { "type" => "changelistcreate", "changelistcreate_params" => {"older_snapid" => isi_last_snap['id'].to_i, "newer_snapid" => isi_new_snap['id'].to_i, "retain_repstate" => true}}
+  puts "Create Changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_new_changelist_method} \n\t#{isi_new_changelist_call} \n\t#{isi_new_changelist_payload}"
+  changelist_job_id = setToApi('isilon',isi_new_changelist_call,isi_new_changelist_payload,isi_new_changelist_method)['id']
+
+  # Monitor the changelist job
+  tm['CreateChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
+  last_state = ''
+  isi_monitor_changelist_call = "/platform/1/job/jobs/#{changelist_job_id}"
+  isi_monitor_changelist_method = "get"
+  puts "Monitor changelist job  #{isi_last_snap['name']} to #{isi_new_snap['name']} (#{tm['CreateChangeList']})\n\t#{isi_monitor_changelist_method}\n\t#{isi_monitor_changelist_call}"
+  while test = getFromApi('isilon',isi_monitor_changelist_call)['jobs'][0]
+    if test['state'] != last_state
+      print test['state'].capitalize 
+      if test['state'] == 'succeeded'
+        puts
+        break
+      end
+      last_state = test['state']
+    else 
+      print '.'
+    end 
+  end
+  tm['MonitorChangeListJob'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "Changelist Job Complete (#{tm['MonitorChangeListJob']})"
+  
+  # Delete Older Snap
+  #setToApi('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
+ 
+
+  # Here we grab the changes
+  iter = 1
+  tm['Pages']=1
+  until !iter
+    a= ''
+    if iter != 1  
+      a= "?resume=#{iter}"
+      tm['Pages'] += 1
+    end
+    isi_dump_changelist_call = "/platform/1/snapshot/changelists/#{isi_last_snap['id']}_#{isi_new_snap['id']}/lins#{a}"
+    isi_dump_changelist_method = "get"
+    puts "Dump changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_dump_changelist_method}\n\t#{isi_dump_changelist_call}"
+    lins=getFromApi('isilon',isi_dump_changelist_call)
+    unless tm['ObjectsReturned'] 
+      tm['ObjectsReturned'] = 0
+    end
+    tm['ObjectsReturned'] += lins['total']
+    tm['Resumable'] = lins['resume']
+    iter = lins['resume']
+  end
+  tm['DumpChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
+  puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
+  pp tm
+  exit
+end
+
+if (Options.sla || Options.sla.nil?) && !Options.split then
   require 'getSlaHash.rb'
   require 'getFromApi.rb'
   require 'getVm.rb'

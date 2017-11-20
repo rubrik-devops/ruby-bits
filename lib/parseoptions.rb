@@ -83,6 +83,29 @@ class ParseOptions
       options[:outfile] = g;
     end
     opts.separator ""
+    opts.separator "Fileset options:"
+    opts.on('--fsbackup', "Dump fileset configurations") do |g|
+      options[:fsbackup] = g;
+    end
+    opts.on('--split', "Parse treesizes xml") do |g|
+      options[:split] = g;
+    end
+    opts.on('--fsreport', "Generates CSV of useful fileset stats") do |g|
+      options[:fsreport] = g;
+    end
+    opts.on('--sharename [string]', "Share to add Filesets to") do |g|
+      options[:sharename] = g;
+    end
+    opts.on('--sharetype [string]', "SMB or NFS") do |g|
+      options[:sharetype] = g;
+    end
+    opts.on('--hostname [string]', "Host to add Filesets to") do |g|
+      options[:hostname] = g;
+    end
+    opts.on('--fsmake', "Generate Filesets") do |g|
+      options[:filesetgen] = g;
+    end
+    opts.separator ""
     opts.separator "Metric options:"
     opts.on('--metric', "Return Requested Metric") do |g|
       options[:metric] = g;
@@ -121,6 +144,9 @@ class ParseOptions
     opts.separator "Experimental options:"
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
+    end
+    opts.on('--isilon [string]', "Experimental - Working with Isilon") do |g|
+      options[:isilon] = g;
     end
     opts.separator ""
     opts.separator "Common options:"
