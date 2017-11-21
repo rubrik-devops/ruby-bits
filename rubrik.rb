@@ -511,11 +511,14 @@ if Options.isilon
     isi_dump_changelist_method = "get"
     puts "Dump changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_dump_changelist_method}\n\t#{isi_dump_changelist_call}"
     lins=restCall('isilon',isi_dump_changelist_call,'','get') # THIS IS THE FILE LIST
-    unless tm['ObjectsReturned'] 
-      tm['ObjectsReturned'] = 0
+    tm['ObjectsReturned'] = 0 if !tm['ObjectsReturned']
+    if lins['total'].to_i
+      tm['ObjectsReturned'] += lins['total'].to_i 
     end
-    tm['ObjectsReturned'] += lins['total'].to_f
-    tm['ObjectsReturnedSize'] = (lins['total'].to_i + tm['ObjectSize'].to_i)
+    tm['ObjectsReturnedSize'] = 0 if !tm['ObjectsReturnedSize']
+    lins['lins'].each do |lin|
+      tm['ObjectsReturnedSize'] += lin['size'].to_i 
+    end
     tm['Resumable'] = lins['resume']
     iter = lins['resume']
   end
