@@ -532,7 +532,7 @@ if Options.isilon
   require 'tiny_tds'
   sql=Creds['sql']
   db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
-  db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,objectstotal,directoriestotal,dumpchangelist_elapse,nfa,nfb,nfc,nda,ndb,ndc,objectsreturnedsize) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['ObjectsTotal']},#{tm['DirectoriesTotal']},#{tm['DumpChangeList']},#{tm['nfa']},#{tm['nfb']},#{tm['nfc']},#{tm['nda']},#{tm['ndb']},#{tm['ndc']},#{tm['ObjectsReturnedSize']})").do
+  db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,dumpchangelist_elapse,nfa,nfb,nfc,nda,ndb,ndc,objectsreturnedsize) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['DumpChangeList']},#{tm['nfa']},#{tm['nfb']},#{tm['nfc']},#{tm['nda']},#{tm['ndb']},#{tm['ndc']},#{tm['ObjectsReturnedSize']})").do
   exit
 end
 
