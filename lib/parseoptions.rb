@@ -148,11 +148,23 @@ class ParseOptions
     opts.on('--isilon [string]', "Experimental - Working with Isilon") do |g|
       options[:isilon] = g;
     end
-    opts.on('--statfiles [int]', "Experimental - File Count") do |g|
-      options[:statfiles] = g;
+    opts.on('--statnfb [int]', "Experimental") do |g|
+      options[:statnfb] = g;
     end
-    opts.on('--statdirs [int]', "Experimental - Directory Count") do |g|
-      options[:statdirs] = g;
+    opts.on('--statndb [int]', "Experimental") do |g|
+      options[:statndb] = g;
+    end
+    opts.on('--statnfa [int]', "Experimental") do |g|
+      options[:statnfa] = g;
+    end
+    opts.on('--statnda [int]', "Experimental") do |g|
+      options[:statnda] = g;
+    end
+    opts.on('--statnfc [int]', "Experimental") do |g|
+      options[:statnfc] = g;
+    end
+    opts.on('--statndc [int]', "Experimental") do |g|
+      options[:statndc] = g;
     end
     opts.separator ""
     opts.separator "Common options:"

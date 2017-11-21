@@ -515,11 +515,16 @@ if Options.isilon
       tm['ObjectsReturned'] = 0
     end
     tm['ObjectsReturned'] += lins['total'].to_f
-    tm['ObjectsTotal'] = Options.statfiles.to_f if Options.statfiles 
-    tm['DirectoriesTotal'] = Options.statdirs.to_f if Options.statdirs 
+    tm['ObjectsReturnedSize'] = (lins['total'].to_i + tm['ObjectSize'].to_i)
     tm['Resumable'] = lins['resume']
     iter = lins['resume']
   end
+  tm['nfa'] = Options.statnfa.to_f if Options.statnfa 
+  tm['nda'] = Options.statnda.to_f if Options.statnda 
+  tm['nfb'] = Options.statnfb.to_f if Options.statnfb 
+  tm['ndb'] = Options.statndb.to_f if Options.statndb 
+  tm['nfc'] = Options.statnfc.to_f if Options.statnfc 
+  tm['ndc'] = Options.statndc.to_f if Options.statndc 
   tm['DumpChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
   puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
   puts "STATS--------------------------------------------------" 
@@ -527,7 +532,7 @@ if Options.isilon
   require 'tiny_tds'
   sql=Creds['sql']
   db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
-  db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,objectstotal,directoriestotal,dumpchangelist_elapse) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['ObjectsTotal']},#{tm['DirectoriesTotal']},#{tm['DumpChangeList']})").do
+  db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,objectstotal,directoriestotal,dumpchangelist_elapse,nfa,nfb,nfc,nda,ndb,ndc,objectsreturnedsize) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['ObjectsTotal']},#{tm['DirectoriesTotal']},#{tm['DumpChangeList']},#{tm['nfa']},#{tm['nfb']},#{tm['nfc']},#{tm['nda']},#{tm['ndb']},#{tm['ndc']},#{tm['ObjectsReturnedSize']})").do
   exit
 end
 
