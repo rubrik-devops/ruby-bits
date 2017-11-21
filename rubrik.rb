@@ -439,12 +439,14 @@ if Options.isilon
   isi_last_snap_call = "/platform/1/snapshot/snapshots?type=real&dir=DESC"
   isi_last_snap_method = "get"
   puts "Getting last Rubrik_ snap info - \n\t#{isi_last_snap_method} \n\t#{isi_last_snap_call}"
+  isi_snap_total = 0
   restCall('isilon',isi_last_snap_call,'','get')['snapshots'].each do |g|
     if g['name'] =~ /^#{isi_snap_prefix}/ && g['path'] == isi_path
-      isi_last_snap=g
-      break
+      isi_snap_total += 1
+      isi_last_snap=g if isi_last_snap.empty?
     end
   end
+  puts "Total Rubrik snaps for this path - #{isi_snap_total}"
   if isi_last_snap.empty?
     puts "\tResults - No Checkpoint found for #{Options.isilon}, will create now"
   else
@@ -535,8 +537,14 @@ if Options.isilon
   db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
   db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,dumpchangelist_elapse,nfa,nfb,nfc,nda,ndb,ndc,objectsreturnedsize) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['DumpChangeList']},#{tm['nfa']},#{tm['nfb']},#{tm['nfc']},#{tm['nda']},#{tm['ndb']},#{tm['ndc']},#{tm['ObjectsReturnedSize']})").do
 
-  # Delete Older Snap
-  restCall('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
+  # Delete Older Snap - we need to add more cleanup here incase snaps get out of control, but I'm saving the original and the isi_new_snap
+  puts "Checking to see if we should cleanup snaps"
+  if isi_snap_total > 1
+    puts "\t removing #{isi_last_snap['id']}"
+    restCall('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', 'delete')
+  else
+    puts "\t Nope, snaps are optimal"
+  end
   exit
 end
 
