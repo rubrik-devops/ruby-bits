@@ -494,8 +494,6 @@ if Options.isilon
   tm['MonitorChangeListJob'] = (Time.now.to_f - tm['Begin']).round(3)
   puts "Changelist Job Complete (#{tm['MonitorChangeListJob']})"
   
-  # Delete Older Snap
-  #restCall('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
  
 
   # Here we grab the changes
@@ -536,6 +534,9 @@ if Options.isilon
   sql=Creds['sql']
   db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
   db.execute(" INSERT INTO isilon ( begin_epoch,getlastsnap_elapse,pages,createnewsnap_elapse,createchangelist_elapse,monitorchangelistjob_elapse,objectsreturned,dumpchangelist_elapse,nfa,nfb,nfc,nda,ndb,ndc,objectsreturnedsize) VALUES ( #{tm['Begin']},#{tm['GetLastSnap']},#{tm['Pages']},#{tm['CreateNewSnap']},#{tm['CreateChangeList']},#{tm['MonitorChangeListJob']},#{tm['ObjectsReturned']},#{tm['DumpChangeList']},#{tm['nfa']},#{tm['nfb']},#{tm['nfc']},#{tm['nda']},#{tm['ndb']},#{tm['ndc']},#{tm['ObjectsReturnedSize']})").do
+
+  # Delete Older Snap
+  restCall('isilon',"/platform/3/snapshot/snapshots/#{isi_last_snap['id']}",'', "delete")
   exit
 end
 
