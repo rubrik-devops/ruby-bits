@@ -428,6 +428,17 @@ end
 if Options.isilon
   require 'securerandom'
   require 'restCall.rb'
+
+  # Get Isilon Share Map
+  isi_shares_map={}
+  isi_shares_call = "/platform/3/protocols/smb/shares"
+  isi_shares_method = "get"
+  restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
+    isi_shares_map[g['name']]=g['path']
+  end
+  pp isi_shares_map
+  exit
+
   b = Time.now.to_f 
   isi_path=Options.isilon
   isi_snap_prefix="Rubrik_"
