@@ -429,7 +429,7 @@ if Options.isilon
   require 'securerandom'
   require 'restCall.rb'
 
-  # Get Isilon Share Map
+  # Get Isilon Share Map - with this we can reference the /ifs path by Share name. This does not work for NFS, that just uses the same path for the 'export'
   isi_shares_map={}
   isi_shares_call = "/platform/3/protocols/smb/shares"
   isi_shares_method = "get"
@@ -445,7 +445,8 @@ if Options.isilon
   tm = {}
   tm['Begin'] = Time.now.to_f
   puts "Begin (#{tm['Begin']})" 
-  # Get the last Rubrik_ snapshot on the isilon
+
+  # Get the last Rubrik_ snapshot on the isilon so that we can compare the new one we create with it.
   isi_last_snap={}
   isi_last_snap_call = "/platform/1/snapshot/snapshots?type=real&dir=DESC"
   isi_last_snap_method = "get"
@@ -465,7 +466,7 @@ if Options.isilon
     puts "\tResults - #{isi_last_snap['name']} (#{isi_last_snap['id']}) (#{tm['GetLastSnap']})"
   end
 
-  # Create a New Snapshot to create changelist
+  # Create a New Snapshot to compare against the last snapshot that we found
   isi_path=Options.isilon
   isi_snap_name="Rubrik_"+SecureRandom.uuid
   isi_new_snap_call = "/platform/1/snapshot/snapshots"
@@ -479,6 +480,7 @@ if Options.isilon
     puts "Complete - Full file scan must be done to continue this backup"
     exit
   end
+
   # Create the changelist job to compare the new snapshot with the last one
   isi_new_changelist_call = "/platform/3/job/jobs"
   isi_new_changelist_method = "post"
@@ -486,7 +488,7 @@ if Options.isilon
   puts "Create Changelist #{isi_last_snap['id']}_#{isi_new_snap['id']} \n\t#{isi_new_changelist_method} \n\t#{isi_new_changelist_call} \n\t#{isi_new_changelist_payload}"
   changelist_job_id = restCall('isilon',isi_new_changelist_call,isi_new_changelist_payload,isi_new_changelist_method)['id']
 
-  # Monitor the changelist job
+  # Monitor the changelist job until it's complete
   tm['CreateChangeList'] = (Time.now.to_f - tm['Begin']).round(3)
   last_state = ''
   isi_monitor_changelist_call = "/platform/1/job/jobs/#{changelist_job_id}"
@@ -509,7 +511,7 @@ if Options.isilon
   
  
 
-  # Here we grab the changes
+  # Here we grab the changes, which can be paged through. The call returns 2048 'lins' in a clip.
   iter = 1
   tm['Pages']=1
   until !iter
@@ -543,6 +545,9 @@ if Options.isilon
   puts "Dump ChangeList Complete (#{tm['DumpChangeList']})"
   puts "STATS--------------------------------------------------" 
   pp tm
+
+
+# I dump the metrics to a db for further analysis.
   require 'tiny_tds'
   sql=Creds['sql']
   db = TinyTds::Client.new username: sql['username'], password: sql['password'], host: sql['servers'].sample
