@@ -437,7 +437,6 @@ if Options.isilon
     isi_shares_map[g['name']]=g['path']
   end
   pp isi_shares_map
-  exit
 
   b = Time.now.to_f 
   isi_path=Options.isilon
