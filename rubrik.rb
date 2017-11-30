@@ -8,6 +8,7 @@ require 'csv'
 require 'uri'
 require 'getVm.rb'
 
+
 class Hash
    def Hash.nest
      Hash.new{|h,k| h[k]=Hash.new(&h.default_proc) }

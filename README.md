@@ -117,11 +117,7 @@ Checking VMDK size on 19 VMs
  - 0 have failed the VMDK check for ["1", "100"] gb total size 
 Setting 19 to Gold ...................Done
 ```
-## Delete all snapshots for VMs if Relic for over N days
-```
-Command - ruby .\rubrik.rb --relics [number of days] -u admin -p password -n my.rubrik.cluster
-DNP-Junk-SW (VirtualMachine:::d0394ed7-a4b3-4c5f-8ecc-5a8199fa007f-vm-3791 is Relic : Newest Snapshot 19 Days ago, DELETING ALL SNAPS
-```
+
 ## Get Disk Capacity Metrics from the Rubrik Cluster
 ```
 Command - ruby rubrik.rb -n my.rubrik.cluster -u admin -p password --metric --storage --json
