@@ -437,7 +437,6 @@ if Options.isilon
   restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
     isi_shares_map[g['name']]=g['path']
   end
-  pp isi_shares_map
 
   b = Time.now.to_f 
   isi_path=Options.isilon
@@ -515,9 +514,9 @@ if Options.isilon
   iter = 1
   tm['Pages']=1
   until !iter
-    a= ''
+    a= '?limit=100000'
     if iter != 1  
-      a= "?resume=#{iter}"
+      a= "?limit=100000&resume=#{iter}"
       tm['Pages'] += 1
     end
     isi_dump_changelist_call = "/platform/1/snapshot/changelists/#{isi_last_snap['id']}_#{isi_new_snap['id']}/lins#{a}"
