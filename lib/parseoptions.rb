@@ -145,8 +145,14 @@ class ParseOptions
     opts.on('--file', "Experimental - file search and recovery") do |g|
       options[:file] = g;
     end
-    opts.on('--isilon [string]', "Experimental - Working with Isilon") do |g|
+    opts.on('--isilon', "Isilon") do |g|
       options[:isilon] = g;
+    end
+    opts.on('--addshares', "Add Isilon Shares as File Sets") do |g|
+      options[:addshares] = g;
+    end
+    opts.on('--cl [string]', "EXP") do |g|
+      options[:changelist] = g;
     end
     opts.on('--statnfb [int]', "Experimental") do |g|
       options[:statnfb] = g;

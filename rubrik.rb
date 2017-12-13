@@ -207,7 +207,6 @@ if Options.split && Options.infile && Options.sharename && Options.sharetype
   end
   exit
 end
-
 if Options.fsreport 
   puts ('"Share Name","Fileset Name","Snapshot Count","Last Snapshot Date","File Count","Size"')
   shares = {}
@@ -426,7 +425,86 @@ if Options.odb then
   end
 end
 
-if Options.isilon
+if Options.isilon && Options.addshares
+  require 'restCall.rb'
+
+# Get Isilon Share Map - with this we can reference the /ifs path by Share name. This does not work for NFS, that just uses the same path for the 'export'
+  puts "Getting Isilon SMB Shares"
+  isi_shares_map={}
+  isi_shares_call = "/platform/3/protocols/smb/shares"
+  isi_shares_method = "get"
+  restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
+    isi_shares_map[g['name']] = {'exportPoint'=> g['name'], 'ifsPath' => g['path'], 'type' => 'SMB'}
+    print "."
+  end
+  puts "DONE"
+
+  isi_shares_call_nfs = "/platform/4/protocols/nfs/exports"
+  isi_shares_method_nfs = "get"
+
+  # Iterate NFS Exports
+  puts "Getting Isilon NFS Exports"
+  restCall('isilon',isi_shares_call_nfs,'',isi_shares_method_nfs)['exports'].each do |g|
+    g['paths'].each do |p|
+      if g['description'].empty? 
+        desc = p 
+      else 
+        desc = g['description']
+      end
+      isi_shares_map[desc] = {'exportPoint'=> p,'ifsPath' => p ,'type' => 'NFS'}
+    end
+    print "."
+  end
+  puts "DONE"
+
+# Look at host and share configuration on Rubrik
+  hostname = Creds['isilon']['servers'].sample(1)[0].split(/:/)[0]
+  host = restCall('rubrik',"/api/v1/host?hostname=#{URI::encode(hostname)}",'','get')
+  if host['total'] == 0
+    puts "#{hostname} is not configured on Rubrik"
+  else
+
+    # Make sure fileset templates exist
+    puts "Checking for baseline fileset templates"
+    isi_shares_map.each do |sh|
+      if (restCall('rubrik',"/api/v1/fileset_template?share_type=#{sh[1]['type']}&name=All Content&",'','get'))['total'] > 0
+        i = i
+      else
+        puts "\tCreating Fileset Template #{sh[1]['type']}"
+        o = restCall('rubrik','/api/v1/fileset_template',{ "shareType" => "#{sh[1]['type']}", "includes" => ["**"], "name" => "All Content"} ,"post")
+      end
+    end
+
+    # Make sure Shares exist
+    puts "Checking to see if shares exist"
+    hostId = host['data'][0]['id']
+    isi_shares_map.each do |sm|
+      exists = false
+      restCall('rubrik',"/api/internal/host/share?hostname=#{URI::encode(hostname)}&share_type=#{sm[1]['type']}",'','get')['data'].each do |sh| 
+        if sm[1]['exportPoint'] == sh['exportPoint'] && !exists 
+          puts "\tShare for #{hostname} - #{sh['exportPoint']}  (#{sm[1]['type']}) exists."
+          exists=true
+          shareId=sh['id']
+        end
+      end
+      # Add Shares here
+      if !exists
+        puts "\tCreating share entry for #{hostId}, #{sm[1]['type']}, #{sm[1]['exportPoint']}"
+        shareId = restCall('rubrik',"/api/internal/host/share", { "hostId" => "#{hostId}", "shareType" => "#{sm[1]['type']}", "exportPoint" => "#{sm[1]['exportPoint']}"},"post")['id']
+      end
+      templateId = (restCall('rubrik',"/api/v1/fileset_template?share_type=#{sm[1]['type']}&name=All Content&",'','get'))['data'][0]['id'] 
+      if restCall('rubrik',"/api/v1/fileset?host_id=#{hostId}&share_id=#{shareId}&template_id=#{templateId}",'','get')['total'] == 0
+        puts "\tLinking Share for #{sm[1]['exportPoint']} to fileset template"
+        o = restCall('rubrik','/api/v1/fileset',{ "shareId" => "#{shareId}", "hostId" => "#{hostId}","templateId" => "#{templateId}"} ,"post")['id']
+      else
+        puts "\t Link Exists for #{sm[1]['exportPoint']} to fileset template"
+      end
+    end
+  end
+  exit
+end
+
+if Options.isilon && Options.changelist
   require 'securerandom'
   require 'restCall.rb'
 
@@ -439,7 +517,7 @@ if Options.isilon
   end
 
   b = Time.now.to_f 
-  isi_path=Options.isilon
+  isi_path=Options.changelist
   isi_snap_prefix="Rubrik_"
   tm = {}
   tm['Begin'] = Time.now.to_f
