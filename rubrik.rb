@@ -9,6 +9,12 @@ require 'uri'
 require 'getVm.rb'
 
 
+class DateTime
+  def to_time
+    Time.local( *strftime( "%Y-%m-%d %H:%M:%S" ).split )
+  end
+end
+
 class Hash
    def Hash.nest
      Hash.new{|h,k| h[k]=Hash.new(&h.default_proc) }
@@ -312,26 +318,80 @@ end
 
 
 if Options.envision then
+  # Get the ID of the specified report
+  require 'pathname'
+  pn = Pathname.new("data.rubrik")
+  if pn.exist? 
+    dataset = JSON.parse(File.read('data.rubrik'))
+  else
+    dataset = Array.new
+  end
   h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
   h['data'].each do |r|
     if r['name'] == Options.envision then
-      o=restCall('rubrik',"/api/internal/report/#{r['id']}/table",'','get')
-      hdr = o['columns']
-      if !Options.outfile then 
-        puts hdr.to_csv
-      end
-      o['dataGrid'].each do |e|
-        if Options.tag then
-          vmr=restCall('rubrik',"/api/v1/vmware/vm/#{x['ObjectId']}",'','get')
-          puts vmr['moid']
-        end
-        if Options.outfile then
-          writecsv(e,hdr)
+  # Get the headers for the report
+      end_date = Time.at(Time.now.to_i).to_date
+      start_date = Time.at((Time.now - (60*60*24*7)).to_i).to_date
+      report_dates = (start_date..end_date).map(&:to_s)
+      last = false
+      done = false
+      puts "Getting Report Data"
+      until done 
+        # See if we're making a fresh call or paging call
+        if last
+          go="after_id=#{last}"
+          call = "/api/internal/report/#{r['id']}/table?limit=9&sort_attr=QueuedTime&sort_order=desc&#{go}"
         else
-          puts e.to_csv
+          call = "/api/internal/report/#{r['id']}/table?limit=9&sort_attr=QueuedTime&sort_order=desc"
+        end
+        o=restCall('rubrik',call,'','get')
+        hdr = o['columns']
+
+        # Iterate results and see if it's in range, add it to data_set
+        o['dataGrid'].each do |line|
+          zip = hdr.zip(line).to_h
+          q_date = zip['QueuedTime'].gsub(/(\d{4}\-\d{2}\-\d{2}).*$/,'\1')
+          if report_dates.include?(q_date)
+            dataset << line
+          end
+        end 
+        # See if we need to grab more results
+        last = o['lastId']
+        if o['hasMore'] == false
+          done=1
         end
       end
-    end
+
+      # save the data to pstore
+      dataset = dataset.uniq
+
+      #do stuff with datasets
+      if Options.outfile then 
+        puts hdr.to_csv
+        store['records'].each do |e|
+          writecsv(e,hdr)
+        end
+      elsif Options.html then
+        html = ''
+        html << "<table>"
+        hdr.each do |h|
+          html << "<th>#{h}</th>"
+        end
+        dataset.each do |line|
+          html << "<tr>" 
+          line.each do |r|
+            html << "<td>#{r}</td>"
+          end
+          html << "<tr>"
+        end
+        html << "/table>"
+
+  # Dump to STDOUT
+        else
+        puts e.to_csv
+      end
+    File.write("data.rubrik", dataset.to_json)
+    end 
   end
 end
 
@@ -456,6 +516,8 @@ if Options.isilon && Options.addshares
     print "."
   end
   puts "DONE"
+  pp isi_shares_map
+  exit
 
 # Look at host and share configuration on Rubrik
   hostname = Creds['isilon']['servers'].sample(1)[0].split(/:/)[0]
