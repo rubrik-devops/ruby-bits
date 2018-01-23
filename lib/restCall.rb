@@ -6,11 +6,17 @@ def restCall(server,endpoint,l,type)
     endpoint = URI.encode(endpoint)
     if Options.auth == 'token'
       (t,sv) = get_token(server)
-      conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
+      conn = Faraday.new(:url => 'https://' + sv.sample(1)[0], request: {
+        open_timeout: 5,   # opening a connection
+        timeout: 60         # waiting for response
+        })
       conn.authorization :Bearer, t
     else
       (u,pw,sv) = get_token(server)
-      conn = Faraday.new(:url => 'https://' + sv.sample(1)[0])
+      conn = Faraday.new(:url => 'https://' + sv.sample(1)[0], request: {
+        open_timeout: 5,   # opening a connection
+        timeout: 60         # waiting for response
+        })
       conn.basic_auth u, pw
       conn.headers['Authorization']
     end

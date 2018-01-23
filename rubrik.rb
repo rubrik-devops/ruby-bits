@@ -329,20 +329,27 @@ if Options.envision then
   h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
   h['data'].each do |r|
     if r['name'] == Options.envision then
-  # Get the headers for the report
+      # Get the headers for the report
       end_date = Time.at(Time.now.to_i).to_date
-      start_date = Time.at((Time.now - (60*60*24*7)).to_i).to_date
-      report_dates = (start_date..end_date).map(&:to_s)
+      seven_day = Time.at((Time.now - (60*60*24*7)).to_i).to_date
+      fourteen_day = Time.at((Time.now - (60*60*24*14)).to_i).to_date
+      seven_days = (seven_day..end_date).map(&:to_s)
+      fourteen_days = (fourteen_day..end_date).map(&:to_s)
       last = false
       done = false
-      puts "Getting Report Data"
+      page=0
+      puts "Getting report data from Rubrik"
       until done 
         # See if we're making a fresh call or paging call
         if last
+          page += 1 
           go="after_id=#{last}"
-          call = "/api/internal/report/#{r['id']}/table?limit=9&sort_attr=QueuedTime&sort_order=desc&#{go}"
+          call = "/api/internal/report/#{r['id']}/table?limit=5000&sort_attr=QueuedTime&sort_order=desc&#{go}"
+          puts "Page #{page}"
         else
-          call = "/api/internal/report/#{r['id']}/table?limit=9&sort_attr=QueuedTime&sort_order=desc"
+          page += 1 
+          call = "/api/internal/report/#{r['id']}/table?limit=5000&sort_attr=QueuedTime&sort_order=desc"
+          puts "Page #{page}"
         end
         o=restCall('rubrik',call,'','get')
         hdr = o['columns']
@@ -351,7 +358,7 @@ if Options.envision then
         o['dataGrid'].each do |line|
           zip = hdr.zip(line).to_h
           q_date = zip['QueuedTime'].gsub(/(\d{4}\-\d{2}\-\d{2}).*$/,'\1')
-          if report_dates.include?(q_date)
+          if seven_days.include?(q_date)
             dataset << line
           end
         end 
@@ -361,9 +368,12 @@ if Options.envision then
           done=1
         end
       end
+      puts "Updating data store"
 
       # save the data to pstore
       dataset = dataset.uniq
+      dataset = dataset.sort_by { |k| k[10] }.reverse
+      puts "Assembling Output"
 
       #do stuff with datasets
       if Options.outfile then 
@@ -372,19 +382,110 @@ if Options.envision then
           writecsv(e,hdr)
         end
       elsif Options.html then
+        issues = Hash.new
+        summary = Hash.new
+        dataset.each do |line|
+          zip = hdr.zip(line).to_h
+          #next unless zip['TaskStatus'] == "Failed"
+          next unless Time.parse(zip['StartTime']).to_i > ((Time.now.to_i)-(14*86400))
+          unless issues.key?(zip['TaskType'])
+            issues[zip['TaskType']] = Hash.new
+          end
+          unless issues[zip['TaskType']].key?(zip['ObjectName'])
+            issues[zip['TaskType']][zip['ObjectName']] = Hash.new
+          end
+          unless issues[zip['TaskType']][zip['ObjectName']].key?(zip['TaskStatus'])
+             issues[zip['TaskType']][zip['ObjectName']][zip['TaskStatus']] = 1
+          else
+             issues[zip['TaskType']][zip['ObjectName']][zip['TaskStatus']] += 1
+          end
+          unless issues[zip['TaskType']][zip['ObjectName']].key?('Succeeded')
+            issues[zip['TaskType']][zip['ObjectName']]['Succeeded'] = 0
+          end
+          unless issues[zip['TaskType']][zip['ObjectName']].key?('Failed')
+            issues[zip['TaskType']][zip['ObjectName']]['Failed'] = 0
+          end
+          # date/sla successes, failures, percent, size
+          q_date = zip['QueuedTime'].gsub(/(\d{4}\-\d{2}\-\d{2}).*$/,'\1')
+          unless summary.key?(q_date)
+            summary[q_date] = Hash.new
+          end
+          unless summary[q_date].key?(zip['SlaDomain'])
+            summary[q_date][zip['SlaDomain']] = Hash.new
+          end
+          unless summary[q_date][zip['SlaDomain']].key?(zip['TaskStatus'])
+            summary[q_date][zip['SlaDomain']][zip['TaskStatus']] = 1
+          else
+            summary[q_date][zip['SlaDomain']][zip['TaskStatus']] += 1
+          end
+          unless summary[q_date][zip['SlaDomain']].key?("Failed")
+            summary[q_date][zip['SlaDomain']]["Failed"] = 0
+          end
+          unless summary[q_date][zip['SlaDomain']].key?("Succeeded")
+            summary[q_date][zip['SlaDomain']]["Succeeded"] = 0
+          end
+          unless summary[q_date][zip['SlaDomain']].key?('DataTransferred')
+            summary[q_date][zip['SlaDomain']]['DataTransferred'] = zip['DataTransferred']
+          else
+            summary[q_date][zip['SlaDomain']]['DataTransferred'] = ((zip['DataTransferred']).to_i + (summary[q_date][zip['SlaDomain']]['DataTransferred']).to_i) 
+          end
+        end  
+
+        # Begin HTML Formatting for Title
         html = ''
-        html << "<table>"
-        hdr.each do |h|
+        html << "<table width=1000>"
+        html << "<tr><td align=center><font size='+2'>Rubrik Daily Report</font></td></tr>"
+        html << "<tr><td align=center>#{Time.now.strftime('%b %d, %Y')}</td></tr>"
+        html << "<tr><td align=center><hr></td></tr>"
+        html << "</table>"
+
+        # Set Table Output for 24 hour report 
+        data_req = ["ObjectName", "TaskType", "SlaDomain", "TaskStatus", "StartTime", "EndTime", "Duration", "14DaySuccessRate"]
+        html << "<table width=1000>"
+        html << "<tr border=1><td colspan=#{data_req.count} align=center border=1><b>Job Failures (Last 24 Hours)</b></td></tr>"
+        data_req.each do |h|
           html << "<th>#{h}</th>"
         end
         dataset.each do |line|
+          zip = hdr.zip(line).to_h
+          zip['14DaySuccessRate'] =  (((issues[zip['TaskType']][zip['ObjectName']]['Succeeded'] / (issues[zip['TaskType']][zip['ObjectName']]['Succeeded']+issues[zip['TaskType']][zip['ObjectName']]['Failed'])).to_i)*100).to_s + "%"
+          next unless zip['TaskStatus'] == "Failed"
+          next unless Time.parse(zip['StartTime']).to_i > ((Time.now.to_i)-86400)
           html << "<tr>" 
-          line.each do |r|
-            html << "<td>#{r}</td>"
+          data_req.each do |r|
+            if r == "Duration"
+              o = Time.at(zip[r].to_i/1000).utc.strftime("%H:%M:%S")
+            else
+              o = zip[r]
+            end
+            html << "<td align=center>#{o}</td>"
           end
           html << "<tr>"
         end
-        html << "/table>"
+        html << "</table>"
+       
+        # Summary Table
+        data_req = ["Day", "SlaDomain", "Success", "Failure", "SuccessRate", "DataTransferred"]
+        html << "<table width=1000>"
+        html << "<tr><td colspan=#{data_req.count} align=center><hr></td></tr>"
+        html << "<tr><td colspan=#{data_req.count} align=center><b>7 Day Success Rates</b></td></tr>"
+        data_req.each do |h|
+          html << "<th align=center>#{h}</th>"
+        end
+        summary.keys.each do |sum|
+          summary[sum].keys.sort.each do |sla|
+            html << "<tr>"
+            html << "<td align=center>#{sum}</td>" 
+            html << "<td align=center>#{sla}</td>" 
+            html << "<td align=center>#{summary[sum][sla]['Succeeded']}</td>" 
+            html << "<td align=center>#{summary[sum][sla]['Failed']}</td>" 
+            html << "<td align=center>#{((((summary[sum][sla]['Succeeded'].to_f)/((summary[sum][sla]['Succeeded'].to_f)+(summary[sum][sla]['Failed'].to_f)))*100).to_i).to_s + "%"}</td>" 
+            html << "<td align=center>#{(((summary[sum][sla]['DataTransferred'].to_f)/1024/1024/1024).round(2)).to_s + "GB"}</td>" 
+            html << "</tr>"
+          end
+        end
+        html << "</table>"
+        IO.write("out.html",html)
 
   # Dump to STDOUT
         else
