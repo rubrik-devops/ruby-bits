@@ -8,14 +8,14 @@ def restCall(server,endpoint,l,type)
       (t,sv) = get_token(server)
       conn = Faraday.new(:url => 'https://' + sv.sample(1)[0], request: {
         open_timeout: 5,   # opening a connection
-        timeout: 60         # waiting for response
+        timeout: 360         # waiting for response
         })
       conn.authorization :Bearer, t
     else
       (u,pw,sv) = get_token(server)
       conn = Faraday.new(:url => 'https://' + sv.sample(1)[0], request: {
         open_timeout: 5,   # opening a connection
-        timeout: 60         # waiting for response
+        timeout: 360         # waiting for response
         })
       conn.basic_auth u, pw
       conn.headers['Authorization']

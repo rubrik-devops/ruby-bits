@@ -1,6 +1,6 @@
-require 'setToApi.rb'
+require 'restCall.rb'
 
 def setSla(mId,id)
-    o = setToApi('rubrik','/api/v1/vmware/vm/' + mId ,{ "configuredSlaDomainId" => "#{id}"},"patch")
+    o = restCall('rubrik','/api/v1/vmware/vm/' + mId ,{ "configuredSlaDomainId" => "#{id}"},"patch")
     return o
 end

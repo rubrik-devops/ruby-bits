@@ -344,11 +344,11 @@ if Options.envision then
         if last
           page += 1 
           go="after_id=#{last}"
-          call = "/api/internal/report/#{r['id']}/table?limit=5000&sort_attr=QueuedTime&sort_order=desc&#{go}"
+          call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc&#{go}"
           puts "Page #{page}"
         else
           page += 1 
-          call = "/api/internal/report/#{r['id']}/table?limit=5000&sort_attr=QueuedTime&sort_order=desc"
+          call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc"
           puts "Page #{page}"
         end
         o=restCall('rubrik',call,'','get')
