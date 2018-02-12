@@ -1,6 +1,7 @@
 $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
 require 'parseoptions.rb'
 require 'pp'
+require 'mail'
 require 'getCreds.rb'
 require 'restCall.rb'
 require 'json'
@@ -485,7 +486,13 @@ if Options.envision then
           end
         end
         html << "</table>"
-        IO.write("out.html",html)
+        mail = Mail.new do
+  	 from    'reports@rubrik.com'
+	 to      'peterm@rubrik.com'
+         subject 'Test report'
+         body    html 
+        end
+        #IO.write("out.html",html)
 
   # Dump to STDOUT
         else
