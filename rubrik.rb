@@ -328,6 +328,7 @@ if Options.envision then
     dataset = Array.new
   end
   h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
+  pp h
   h['data'].each do |r|
     if r['name'] == Options.envision then
       # Get the headers for the report
@@ -434,6 +435,7 @@ if Options.envision then
 
         # Begin HTML Formatting for Title
         html = ''
+        html << "<html>"
         html << "<table width=1000>"
         html << "<tr><td align=center><font size='+2'>Rubrik Daily Report</font></td></tr>"
         html << "<tr><td align=center>#{Time.now.strftime('%b %d, %Y')}</td></tr>"
@@ -486,12 +488,18 @@ if Options.envision then
           end
         end
         html << "</table>"
+        html << "</html>"
         mail = Mail.new do
   	 from    'reports@rubrik.com'
 	 to      'peterm@rubrik.com'
          subject 'Test report'
-         body    html 
+   	 html_part do
+    	  content_type 'text/html; charset=UTF-8'
+    	  body html
+  	 end
         end
+        mail.delivery_method :sendmail
+	mail.deliver
         #IO.write("out.html",html)
 
   # Dump to STDOUT
