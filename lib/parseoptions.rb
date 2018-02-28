@@ -79,6 +79,9 @@ class ParseOptions
     opts.on('--html', "Format as HTML if possible") do |g|
       options[:html] = g;
     end
+    opts.on('--email', "Send to [string] if possible") do |g|
+      options[:email] = g;
+    end
     opts.on('--vmusage', "Return CSV of per-vm usage") do |g|
       options[:vmusage] = g;
     end

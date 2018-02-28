@@ -1,7 +1,6 @@
 $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
 require 'parseoptions.rb'
 require 'pp'
-require 'mail'
 require 'getCreds.rb'
 require 'restCall.rb'
 require 'json'
@@ -223,7 +222,7 @@ if Options.fsreport
   restCall('rubrik',"/api/v1/fileset",'','get')['data'].each do |fs|
     size=0
     fileset = restCall('rubrik',"/api/v1/fileset/#{fs['id']}",'','get')
-    next if fileset['configuredSlaDomainName'] != "Milbank NAS Backup SLA"
+    next if fileset['configuredSlaDomainName'] != "NAS Backup SLA"
     restCall('rubrik',"/api/v1/fileset/snapshot/#{fileset['snapshots'].last['id']}/browse?path=%2F",'','get')['data'].each do |mysize|
       size += mysize['size']
     end
@@ -489,19 +488,22 @@ if Options.envision then
         end
         html << "</table>"
         html << "</html>"
-        mail = Mail.new do
-  	 from    'reports@rubrik.com'
-	 to      'peterm@rubrik.com'
-         subject 'Test report'
-   	 html_part do
-    	  content_type 'text/html; charset=UTF-8'
-    	  body html
-  	 end
-        end
+        if Options.email 
+          require 'mail'
+          mail = Mail.new do
+            from    'reports@rubrik.com'
+  	    to      email 
+            subject 'Test report'
+   	    html_part do
+    	      content_type 'text/html; charset=UTF-8'
+    	      body html
+  	    end
+          end
         mail.delivery_method :sendmail
 	mail.deliver
-        #IO.write("out.html",html)
-
+        else
+          IO.write("out.html",html)
+        end
   # Dump to STDOUT
         else
         puts e.to_csv
