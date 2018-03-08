@@ -327,7 +327,7 @@ if Options.envision then
     dataset = Array.new
   end
   h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
-  pp h
+  puts h
   h['data'].each do |r|
     if r['name'] == Options.envision then
       # Get the headers for the report
@@ -348,12 +348,14 @@ if Options.envision then
           call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc&#{go}"
           puts "Page #{page}"
         else
+          print "First Call\n"
           page += 1 
           call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc"
           puts "Page #{page}"
         end
         o=restCall('rubrik',call,'','get')
         hdr = o['columns']
+      
 
         # Iterate results and see if it's in range, add it to data_set
         o['dataGrid'].each do |line|
@@ -371,15 +373,17 @@ if Options.envision then
       end
       puts "Updating data store"
 
+
       # save the data to pstore
       dataset = dataset.uniq
       dataset = dataset.sort_by { |k| k[10] }.reverse
       puts "Assembling Output"
+ # Here
 
       #do stuff with datasets
       if Options.outfile then 
         puts hdr.to_csv
-        store['records'].each do |e|
+        dataset.each do |e|
           writecsv(e,hdr)
         end
       elsif Options.html then
