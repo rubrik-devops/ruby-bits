@@ -2,10 +2,10 @@ $LOAD_PATH.unshift File.expand_path('../lib/', __FILE__)
 require 'parseoptions.rb'
 require 'pp'
 require 'getCreds.rb'
-require 'restCall.rb'
 require 'json'
 require 'csv'
 require 'uri'
+require 'restCall.rb'
 require 'getVm.rb'
 
 
@@ -89,12 +89,16 @@ def to_g (b)
   (((b.to_i/1024/1024/1024) * 100) / 100).round 
 end
 
+# BEGIN
 Creds = getCreds();
 Begintime=Time.now
 Logtime=Begintime.to_i
 
 # Global options
 Options = ParseOptions.parse(ARGV)
+vers=restCall('rubrik',"/api/v1/cluster/me",'','get')["version"]
+puts "Rubrik CDM Version #{vers}" 
+
 def logme(machine,topic,detail)
   time=Time.now
   timepx=time.to_i
@@ -326,8 +330,12 @@ if Options.envision then
   else
     dataset = Array.new
   end
-  h=restCall('rubrik',"/api/internal/report?search_text=#{Options.envision}",'','get')
-  puts h
+  # VERS
+  if vers.start_with?('4.1') then 
+    h=restCall('rubrik',"/api/internal/report?name=#{Options.envision}",'','get')
+  else 
+    h=restCall('rubrik',"/api/internal/report?search_value=#{Options.envision}",'','get')
+  end
   h['data'].each do |r|
     if r['name'] == Options.envision then
       # Get the headers for the report
@@ -344,29 +352,45 @@ if Options.envision then
         # See if we're making a fresh call or paging call
         if last
           page += 1 
-          go="after_id=#{last}"
-          call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc&#{go}"
+          if vers.start_with?('4.1') then 
+            call = "/api/internal/report/#{r['id']}/table"
+            payload = { "limit": 100, "sortBy": "StartTime", "sortOrder": "desc" , "cursor": "#{last}"}
+          else 
+            go="after_id=#{last}"
+            call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc&#{go}"
+          end
           puts "Page #{page}"
         else
           print "First Call\n"
           page += 1 
-          call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc"
+          if vers.start_with?('4.1') then 
+            call = "/api/internal/report/#{r['id']}/table"
+            payload = { "limit": 100, "sortBy": "StartTime", "sortOrder": "desc" }
+          else
+            call = "/api/internal/report/#{r['id']}/table?limit=1000&sort_attr=QueuedTime&sort_order=desc"
+          end
           puts "Page #{page}"
         end
-        o=restCall('rubrik',call,'','get')
+        if vers.start_with?('4.1') then 
+          o=restCall('rubrik',call,payload,'post')
+        else
+          o=restCall('rubrik',call,'','get')
+        end
         hdr = o['columns']
-      
-
         # Iterate results and see if it's in range, add it to data_set
         o['dataGrid'].each do |line|
           zip = hdr.zip(line).to_h
-          q_date = zip['QueuedTime'].gsub(/(\d{4}\-\d{2}\-\d{2}).*$/,'\1')
+          q_date = zip['StartTime'].gsub(/(\d{4}\-\d{2}\-\d{2}).*$/,'\1')
           if seven_days.include?(q_date)
             dataset << line
           end
         end 
         # See if we need to grab more results
-        last = o['lastId']
+        if vers.start_with?('4.1') then 
+          last = o['cursor']
+        else
+          last = o['lastId']
+        end
         if o['hasMore'] == false
           done=1
         end
@@ -510,7 +534,9 @@ if Options.envision then
         end
   # Dump to STDOUT
         else
-        puts e.to_csv
+        dataset.each do |e|
+          puts e.to_csv
+        end
       end
     File.write("data.rubrik", dataset.to_json)
     end 
