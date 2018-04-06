@@ -629,8 +629,8 @@ if Options.odb then
     (CSV.read(Options.infile, {:headers => true})).each do |vm|
        vmids << findVmItemByName(vm['name'], 'id')
     end
-  odb(vmids)
   end
+  odb(vmids)
 end
 
 if Options.isilon && Options.addshares
@@ -756,11 +756,22 @@ if Options.isilon && Options.changelist
   # Create a New Snapshot to compare against the last snapshot that we found
   isi_path=Options.isilon
   isi_snap_name="Rubrik_"+SecureRandom.uuid
+
+
+
+
   isi_new_snap_call = "/platform/1/snapshot/snapshots"
   isi_new_snap_method = "post"
   isi_new_snap_payload = {"path" => "#{isi_path}", "name" => "#{isi_snap_name}"}
-  print "Creating checkpoint Rubrik_ snap - \n\t#{isi_new_snap_method} \n\t#{isi_new_snap_call} \n\t#{isi_new_snap_payload} "
   isi_new_snap = restCall('isilon',isi_new_snap_call,isi_new_snap_payload,isi_new_snap_method)
+
+
+
+
+  print "Creating checkpoint Rubrik_ snap - \n\t#{isi_new_snap_method} \n\t#{isi_new_snap_call} \n\t#{isi_new_snap_payload} "
+
+
+
   tm['CreateNewSnap'] = (Time.now.to_f - tm['Begin']).round(3)
   puts "\n\tResults -  #{isi_new_snap['name']} (#{isi_new_snap['id']}) (#{tm['CreateNewSnap']})"
   if isi_last_snap.empty?
@@ -851,7 +862,7 @@ if Options.isilon && Options.changelist
   exit
 end
 
-if (Options.sla || Options.sla.nil?) && !Options.split then
+if (Options.sla) && !Options.split then
   require 'getSlaHash.rb'
   require 'restCall.rb'
   sla_hash = getSlaHash()
@@ -865,7 +876,7 @@ if (Options.sla || Options.sla.nil?) && !Options.split then
     livemount(vmids)
     exit
   end
-  if Options.odb && !Options.infile
+  if Options.odb && !Options.infile 
     (restCall('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local",'','get')['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
         puts "#{vm['name']}"
