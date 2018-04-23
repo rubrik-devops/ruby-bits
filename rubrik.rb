@@ -639,7 +639,7 @@ if Options.isilon && Options.addshares
 # Get Isilon Share Map - with this we can reference the /ifs path by Share name. This does not work for NFS, that just uses the same path for the 'export'
   puts "Getting Isilon SMB Shares"
   isi_shares_map={}
-  isi_shares_call = "/platform/3/protocols/smb/shares"
+  isi_shares_call = "/platform/2/protocols/smb/shares"
   isi_shares_method = "get"
   restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
     isi_shares_map[g['name']] = {'exportPoint'=> g['name'], 'ifsPath' => g['path'], 'type' => 'SMB'}
@@ -647,7 +647,7 @@ if Options.isilon && Options.addshares
   end
   puts "DONE"
 
-  isi_shares_call_nfs = "/platform/4/protocols/nfs/exports"
+  isi_shares_call_nfs = "/platform/3/protocols/nfs/exports"
   isi_shares_method_nfs = "get"
 
   # Iterate NFS Exports
