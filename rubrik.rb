@@ -664,8 +664,6 @@ if Options.isilon && Options.addshares
     print "."
   end
   puts "DONE"
-  pp isi_shares_map
-  exit
 
 # Look at host and share configuration on Rubrik
   hostname = Creds['isilon']['servers'].sample(1)[0].split(/:/)[0]
