@@ -53,15 +53,16 @@ def odb (vmids)
   require 'getSlaHash.rb'
   sla_hash = getSlaHash()
   puts "Requesting #{vmids.count} Snapshots"
-  vmids.each_with_index do |vm,num|
+  #vmids.each_with_index do |vm,num|
+  num = 0
+  vmids.each do |vm|
     if Options.assure 
       o = (restCall('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot",{ "slaId" => "#{sla_hash.key(Options.assure)}" },"post"))['status']
-      print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}\t\t\t\t\t\t\t\t\t\r"
+      puts "#{num+=1} - Requesting backup of #{findVmItemById(vm, 'name')}, setting to #{Options.assure} SLA Domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     else
       o = (restCall('rubrik',"/api/v1/vmware/vm/#{vm}/snapshot","","post"))['status']
-      print "#{num+1} - Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}\t\t\t\t\t\t\t\t\t\r"
+      puts "#{num+=1} - Requesting backup of #{findVmItemById(vm, 'name')}, not setting SLA domain - #{o}\t\t\t\t\t\t\t\t\t\r"
     end
-    STDOUT.flush
   end
   puts
 end
@@ -619,7 +620,7 @@ if Options.drcsv then
   logme("END","END",endTimer.to_s + "|" + runtime.to_s)
 end
 
-if Options.odb then
+if Options.odb && Options.vm
   require 'restCall.rb'
   vmids = []
   if Options.vm then
@@ -877,7 +878,6 @@ if (Options.sla) && !Options.split then
   if Options.odb && !Options.infile 
     (restCall('rubrik',"/api/v1/vmware/vm?is_relic=false&limit=9999&primary_cluster_id=local",'','get')['data']).each do |vm|
       if  sla_hash[vm['effectiveSlaDomainId']] == Options.sla 
-        puts "#{vm['name']}"
         vmids << vm['id']
       end
     end
