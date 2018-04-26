@@ -648,7 +648,7 @@ if Options.isilon && Options.addshares
   end
   puts "DONE"
 
-  isi_shares_call_nfs = "/platform/3/protocols/nfs/exports"
+  isi_shares_call_nfs = "/platform/2/protocols/nfs/exports"
   isi_shares_method_nfs = "get"
 
   # Iterate NFS Exports
