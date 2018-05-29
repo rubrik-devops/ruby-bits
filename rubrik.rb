@@ -638,13 +638,20 @@ if Options.isilon && Options.addshares
   require 'restCall.rb'
 
 # Get Isilon Share Map - with this we can reference the /ifs path by Share name. This does not work for NFS, that just uses the same path for the 'export'
-  puts "Getting Isilon SMB Shares"
-  isi_shares_map={}
-  isi_shares_call = "/platform/2/protocols/smb/shares"
-  isi_shares_method = "get"
-  restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
-    isi_shares_map[g['name']] = {'exportPoint'=> g['name'], 'ifsPath' => g['path'], 'type' => 'SMB'}
-    print "."
+  puts "Getting Isilon Zone Names"
+  isi_zones_call = "/platform/1/zones-summary"
+  isi_zones_method = "get"
+  restCall('isilon',isi_zones_call,'',isi_zones_method)['list'].each do |zone|
+    puts "Looking into Zone #{zone}"
+    puts "Getting Isilon SMB Shares"
+    isi_shares_map={}
+    isi_shares_call = "/platform/3/protocols/smb/shares?zone=#{zone}"
+    isi_shares_method = "get"
+    restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
+      isi_shares_map[g['name']] = {'exportPoint'=> g['name'], 'ifsPath' => g['path'], 'type' => 'SMB'}
+      print "."
+    end
+    puts "DONE"
   end
   puts "DONE"
 
@@ -665,6 +672,7 @@ if Options.isilon && Options.addshares
     print "."
   end
   puts "DONE"
+exit
 
 # Look at host and share configuration on Rubrik
   hostname = Creds['isilon']['servers'].sample(1)[0].split(/:/)[0]
