@@ -648,7 +648,7 @@ if Options.isilon && Options.addshares
     isi_shares_call = "/platform/3/protocols/smb/shares?zone=#{zone}"
     isi_shares_method = "get"
     restCall('isilon',isi_shares_call,'',isi_shares_method)['shares'].each do |g|
-      isi_shares_map[g['name']] = {'exportPoint'=> g['name'], 'ifsPath' => g['path'], 'type' => 'SMB'}
+      isi_shares_map[g['name']] = {'exportPoint'=> zone, 'ifsPath' => g['path'], 'type' => 'SMB'}
       print "."
     end
     puts "DONE"
